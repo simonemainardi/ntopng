@@ -245,6 +245,7 @@ int16_t AddressTree::addAddress(char *_net) {
 
   if(node) {
     node->user_data = numAddresses;
+    node->data = (void*)new ByteCounters;
     addressString.push_back(strdup(net));
     numAddresses++;
     return node->user_data;
@@ -269,18 +270,21 @@ bool AddressTree::addAddresses(char *rule) {
 
 /* ******************************************* */
 
-int16_t AddressTree::findAddress(int family, void *addr) {
+int16_t AddressTree::findAddress(int family, void *addr, ByteCounters **data) {
   patricia_node_t *node = ptree_match(ptree, family, addr, (family == AF_INET) ? 32 : 128);
 
   if(node == NULL)
     return(-1);
-  else
+  else{
+    if(data)
+        (*data) = (ByteCounters*)node->data;
     return(node->user_data);
+  }
 }
 
 /* **************************************** */
 
-void free_ptree_data(void *data) { ; }
+void free_ptree_data(void *data) { if(data){free(data); data=NULL;} }
 
 /* **************************************** */
 

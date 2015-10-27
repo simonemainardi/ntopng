@@ -34,6 +34,7 @@ class GenericHost : public GenericHashEntry {
   nDPIStats *ndpiStats;
   TrafficStats sent, rcvd;
   ActivityStats activityStats;
+  ByteCounters *subnet_byte_counters;
   u_int32_t num_alerts_detected;
   u_int8_t source_id;
 

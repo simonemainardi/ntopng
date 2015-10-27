@@ -148,8 +148,9 @@ class Ntop {
    * @param nets String that defined the local network with this Format: 131.114.21.0/24,10.0.0.0/255.0.0.0 .
    */
   void setLocalNetworks(char *nets);
+
   /**
-   * @brief Check if the ingress parameter is in the local networks.
+   * @brief Check if the ingress parameter is in the local networks
    * @details Inline method.
    *
    * @param family Internetwork: UDP, TCP, etc.
@@ -157,7 +158,18 @@ class Ntop {
    * @param network_id It returns the networkId to which the host belongs to
    * @return True if the address is in the local networks, false otherwise.
    */
-  bool isLocalAddress(int family, void *addr, int16_t *network_id);
+  bool isLocalAddress(int family, void *addr, int16_t *network_id);  
+  
+  /**
+   * @brief Check if the ingress parameter is in the local networks and returns local network byte counters.
+   * @details Inline method.
+   *
+   * @param family Internetwork: UDP, TCP, etc.
+   * @param addr Internet Address.
+   * @param network_id It returns the networkId to which the host belongs to
+   * @return A pointer to subnet byte counters or NULL if address is not local
+   */
+  ByteCounters *getSubnetCountersByLocalAddress(int family, void *addr);    
 
   /**
    * @brief Start ntopng packet processing.

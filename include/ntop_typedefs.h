@@ -70,4 +70,8 @@ typedef struct {
   u_int8_t counter[NUM_MINUTES_PER_DAY];
 } activity_bitmap;
 
+// per-subnet bytes counters
+typedef struct {
+  u_int32_t ingress, egress, inner;
+} ByteCounters;
 #endif /* _NTOP_TYPEDEFS_H_ */

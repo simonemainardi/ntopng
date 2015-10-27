@@ -203,6 +203,17 @@ bool IpAddress::isLocalHost(int16_t *network_id) {
 
 /* ******************************************* */
 
+ByteCounters* IpAddress::getSubnetByteCounters(int16_t network_id){
+  if(addr.ipVersion == 4) {
+    u_int32_t v = /* htonl */(addr.ipType.ipv4);
+    return ntop->getSubnetCountersByLocalAddress(AF_INET, (void*)&v);
+  } else {
+    return ntop->getSubnetCountersByLocalAddress(AF_INET6, (void*)&addr.ipType.ipv6);
+  }
+}
+
+/* ******************************************* */
+
 void* IpAddress::findAddress(patricia_tree_t *ptree) {
   if(ptree == NULL)
     return(NULL);

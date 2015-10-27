@@ -75,6 +75,7 @@ class IpAddress {
   char* print(char *str, u_int str_len, u_int8_t bitmask = 0);
   bool isLocalHost(int16_t *network_id);
   bool isLocalInterfaceAddress();
+  ByteCounters *getSubnetByteCounters(int16_t network_id);
   void deserialize(json_object *o);
   char* serialize();
   json_object* getJSONObject();

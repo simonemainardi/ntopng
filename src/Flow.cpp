@@ -694,8 +694,9 @@ void Flow::update_hosts_stats(struct timeval *tv) {
 			 diff_sent_packets, diff_sent_bytes,
 			 diff_rcvd_packets, diff_rcvd_bytes);
 
-      if(srv_host && cli_host->isLocalHost())
+      if(srv_host && cli_host->isLocalHost()){
 	cli_host->incHitter(srv_host, diff_sent_bytes, diff_rcvd_bytes);
+      }
     }
 
     if(srv_host) {

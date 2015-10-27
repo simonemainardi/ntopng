@@ -44,8 +44,8 @@ bool AddressResolution::setLocalNetworks(char *rule) {
 
 /* ******************************************* */
 
-int16_t AddressResolution::findAddress(int family, void *addr) {
-  return(localNetworks.findAddress(family, addr));
+int16_t AddressResolution::findAddress(int family, void *addr, ByteCounters **data) {
+  return(localNetworks.findAddress(family, addr, data));
 }
 
 /* **************************************** */

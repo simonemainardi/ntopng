@@ -298,8 +298,16 @@ void Ntop::start() {
 /* ******************************************* */
 
 bool Ntop::isLocalAddress(int family, void *addr, int16_t *network_id) {
-  *network_id = address->findAddress(family, addr);
+  *network_id = address->findAddress(family, addr, NULL);
   return(((*network_id) == -1) ? false : true);
+};
+
+/* ******************************************* */
+
+ByteCounters *Ntop::getSubnetCountersByLocalAddress(int family, void *addr) {
+  ByteCounters *counters = NULL;
+  int16_t network_id = address->findAddress(family, addr, &counters);
+  return((network_id == -1) ? NULL : counters);
 };
 
 /* ******************************************* */

@@ -41,7 +41,8 @@ class AddressTree {
   int16_t addAddress(char *_net);
   bool addAddresses(char *net);
   bool removeAddress(char *net);
-  int16_t findAddress(int family, void *addr); /* if(rc > 0) networdId else notfound */
+  int16_t findAddress(int family, void *addr); /* if(rc > 0) networdId else notfound */  
+  int16_t findAddress(int family, void *addr, ByteCounters **data);
   void getAddresses(lua_State* vm);
   inline char *getAddressString(u_int8_t id) { return((id < numAddresses) ? addressString[id] : NULL); };
 };

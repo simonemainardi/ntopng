@@ -361,6 +361,9 @@ bool Host::doDropProtocol(ndpi_protocol l7_proto) {
 void Host::updateLocal() {
   if(ip)
     localHost = ip->isLocalHost(&local_network_id);
+  
+  if(localHost && ip)
+    subnet_byte_counters = ip->getSubnetByteCounters(local_network_id);
 
   if(0) {
     char buf[64];
