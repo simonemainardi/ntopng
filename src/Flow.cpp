@@ -662,6 +662,7 @@ void Flow::update_hosts_stats(struct timeval *tv) {
   u_int64_t sent_packets, sent_bytes, rcvd_packets, rcvd_bytes;
   u_int64_t diff_sent_packets, diff_sent_bytes, diff_rcvd_packets, diff_rcvd_bytes;
   bool updated = false;
+  bool cli_and_srv_in_same_subnet = false;
 
   if(check_tor) {
     char rsp[256];
@@ -688,12 +689,21 @@ void Flow::update_hosts_stats(struct timeval *tv) {
   prev_srv2cli_last_bytes = srv2cli_last_bytes, prev_srv2cli_last_packets = srv2cli_last_packets;
   srv2cli_last_packets = rcvd_packets, srv2cli_last_bytes = rcvd_bytes;
 
+  if(cli_host->get_local_network_id() >= 0 && (cli_host->get_local_network_id() == srv_host->get_local_network_id()))
+      cli_and_srv_in_same_subnet = true;
+  
   if(diff_sent_packets || diff_rcvd_packets) {
     if(cli_host) {
       cli_host->incStats(protocol, ndpi_detected_protocol.protocol,
 			 diff_sent_packets, diff_sent_bytes,
 			 diff_rcvd_packets, diff_rcvd_bytes);
-
+      // update per-subnet byte counters
+      if(!cli_and_srv_in_same_subnet){
+          cli_host->incSubnetEgress(diff_sent_bytes);
+          cli_host->incSubnetIngress(diff_rcvd_bytes);
+      } else  // client and server ARE in the same subnet
+          // need to update the inner counter (just one time, will intentionally skip this for srv_host)
+          cli_host->incSubnetInner(diff_sent_bytes + diff_rcvd_bytes);
       if(srv_host && cli_host->isLocalHost()){
 	cli_host->incHitter(srv_host, diff_sent_bytes, diff_rcvd_bytes);
       }
@@ -703,9 +713,14 @@ void Flow::update_hosts_stats(struct timeval *tv) {
       srv_host->incStats(protocol, ndpi_detected_protocol.protocol,
 			 diff_rcvd_packets, diff_rcvd_bytes,
 			 diff_sent_packets, diff_sent_bytes);
-
       if(cli_host && srv_host->isLocalHost())
 	srv_host->incHitter(cli_host, diff_rcvd_bytes, diff_sent_bytes);
+
+      // update per-subnet byte counters
+      if(!cli_and_srv_in_same_subnet){
+          srv_host->incSubnetEgress(diff_rcvd_bytes);
+          srv_host->incSubnetIngress(diff_sent_bytes);
+      }
 
       if(host_server_name
 	 && (ndpi_is_proto(ndpi_detected_protocol, NDPI_PROTOCOL_HTTP)

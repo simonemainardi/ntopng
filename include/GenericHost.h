@@ -66,6 +66,9 @@ class GenericHost : public GenericHashEntry {
   inline u_int16_t get_vlan_id()           { return(vlan_id);        };
   void incStats(u_int8_t l4_proto, u_int ndpi_proto, u_int64_t sent_packets, 
 		u_int64_t sent_bytes, u_int64_t rcvd_packets, u_int64_t rcvd_bytes);
+  void incSubnetIngress(u_int64_t bytes){if(subnet_byte_counters) subnet_byte_counters->ingress+=bytes;}
+  void incSubnetEgress(u_int64_t bytes){if(subnet_byte_counters) subnet_byte_counters->egress+=bytes;}
+  void incSubnetInner(u_int64_t bytes){if(subnet_byte_counters) subnet_byte_counters->inner+=bytes;}
   inline u_int32_t get_host_serial()  { return(host_serial);               };
   inline void incNumAlerts()          { num_alerts_detected++;             };
   inline u_int32_t getNumAlerts()     { return(num_alerts_detected);       };

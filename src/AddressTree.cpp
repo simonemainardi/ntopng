@@ -230,6 +230,8 @@ bool AddressTree::removeAddress(char *net) {
 int16_t AddressTree::addAddress(char *_net) {
   patricia_node_t *node;
   char *net;
+  ByteCounters *data = NULL;
+
 
   if(numAddresses >= CONST_MAX_NUM_NETWORKS) {
     ntop->getTrace()->traceEvent(TRACE_ERROR, "Too many networks defined: ignored %s", _net);
@@ -244,8 +246,10 @@ int16_t AddressTree::addAddress(char *_net) {
   node = ptree_add_rule(ptree, net);
 
   if(node) {
+    data = new ByteCounters;
+    data->egress=0,data->ingress=0,data->inner=0;
     node->user_data = numAddresses;
-    node->data = (void*)new ByteCounters;
+    node->data = (void*)data;
     addressString.push_back(strdup(net));
     numAddresses++;
     return node->user_data;
@@ -295,6 +299,8 @@ AddressTree::~AddressTree() {
 /* **************************************************** */
 
 void print_funct(prefix_t *prefix, void *data, void *user_data) {
+  ByteCounters * ctrs = (ByteCounters*)data;
+  lua_State *vm = (lua_State*)user_data;
   char address[64], ret[64], *a;
 
   if(!prefix) return;
@@ -310,7 +316,21 @@ void print_funct(prefix_t *prefix, void *data, void *user_data) {
   }
 
   snprintf(ret, sizeof(ret), "%s/%d", a, prefix->bitlen);
-  lua_push_str_table_entry((lua_State*)user_data, ret, (char*)"");
+  //lua_push_str_table_entry((lua_State*)user_data, ret, (char*)"");
+  // an additional table with traffic statistics
+  lua_newtable(vm);
+  if(ctrs){
+      lua_push_int_table_entry(vm, "bytes.ingress", ctrs->ingress);
+      lua_push_int_table_entry(vm, "bytes.egress", ctrs->egress);
+      lua_push_int_table_entry(vm, "bytes.inner", ctrs->inner);
+  } else{
+      lua_push_nil_table_entry(vm, "bytes.ingress");
+      lua_push_nil_table_entry(vm, "bytes.egress");
+      lua_push_nil_table_entry(vm, "bytes.inner");
+  }
+  lua_pushstring(vm, ret);
+  lua_insert(vm, -2);
+  lua_settable(vm, -3);
 }
 
 /* **************************************************** */
