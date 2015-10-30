@@ -159,14 +159,20 @@ function percentageBar(total, value, valueLabel)
 end
 
 -- ########################################################
-
-function getRRDName(ifid, host, rrdFile)
-   rrdname = fixPath(dirs.workingdir .. "/" .. ifid .. "/rrd/")
-   if(host ~= nil) then
-      rrdname = rrdname .. getPathFromKey(host) .. "/"
+-- host_or_network: host or network name. If network, must be prefixed with 'net:'
+function getRRDName(ifid, host_or_network, rrdFile)
+   if host_or_network ~= nil and string.starts(host_or_network, 'net:') then
+       host_or_network = string.gsub(host_or_network, 'net:', '')
+       rrdname = fixPath(dirs.workingdir .. "/" .. ifid .. "/subnetstats/")
+   else
+       rrdname = fixPath(dirs.workingdir .. "/" .. ifid .. "/rrd/")
    end
 
-   return(rrdname  .. rrdFile)
+   if(host_or_network ~= nil) then
+      rrdname = rrdname .. getPathFromKey(host_or_network) .. "/"
+   end
+
+   return(rrdname..rrdFile)
 end
 
 -- ########################################################
@@ -333,7 +339,7 @@ function drawRRD(ifid, host, rrdFile, zoomLevel, baseurl, show_timeseries,
       print("<script>setInterval(function() { window.location.reload();}, 60*1000); </script>\n");
    end
 
-   if(ntop.isPro()) then
+   if ntop.isPro() then
       drawProGraph(ifid, host, rrdFile, zoomLevel, baseurl, show_timeseries, selectedEpoch, selected_epoch_sanitized, topArray)
       return
    end

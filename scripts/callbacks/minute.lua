@@ -103,7 +103,7 @@ for _,_ifname in pairs(ifnames) do
                 ntop.mkdir(rrdpath)
              end             
              rrdpath = fixPath(rrdpath .. "/bytes.rrd")
-             createTripleRRDcounter(rrdpath, 300, true)
+             createTripleRRDcounter(rrdpath, 300, false)
              ntop.rrd_update(rrdpath, "N:"..tolongint(sstats["bytes.ingress"]) .. ":" .. tolongint(sstats["bytes.egress"]) .. ":" .. tolongint(sstats["bytes.inner"]))
          end
 
