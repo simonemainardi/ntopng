@@ -32,6 +32,8 @@ class Flow;
 class FlowHash;
 class Host;
 class HostHash;
+class Network;
+class NetworkHash;
 class DB;
 /**
  * @struct ether80211q
@@ -110,6 +112,7 @@ class NetworkInterface {
   nDPIStats ndpiStats;
   PacketStats pktStats;
   FlowHash *flows_hash; /**< Hash used to memorize the flows information.*/
+  NetworkHash *networks_hash; /* Hash used to memorize network information */
   /* Hosts */
   HostHash *hosts_hash; /**< Hash used to memorize the hosts information.*/
   bool purge_idle_flows_hosts, sprobe_interface, inline_interface,
@@ -209,6 +212,9 @@ class NetworkInterface {
   void findFlowHosts(u_int16_t vlan_id,
 		     u_int8_t src_mac[6], IpAddress *_src_ip, Host **src,
 		     u_int8_t dst_mac[6], IpAddress *_dst_ip, Host **dst);
+  void findFlowNetworks(u_int16_t vlan_id,
+		     Host *cli, Network **cli_network,
+		     Host *srv, Network **srv_network);  
   Flow* findFlowByKey(u_int32_t key, patricia_tree_t *allowed_hosts);
   void findHostsByName(lua_State* vm, patricia_tree_t *allowed_hosts, char *key); 
   bool packet_dissector(const struct pcap_pkthdr *h, const u_char *packet,

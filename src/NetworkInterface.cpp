@@ -155,6 +155,7 @@ NetworkInterface::NetworkInterface(const char *name) {
     num_hashes = max_val(4096, ntop->getPrefs()->get_max_num_hosts()/4);
     hosts_hash = new HostHash(this, num_hashes, ntop->getPrefs()->get_max_num_hosts());
 
+    networks_hash = new NetworkHash(this, 4096, ntop->getNumLocalNetworks());
     // init global detection structure
     ndpi_struct = ndpi_init_detection_module(ntop->getGlobals()->get_detection_tick_resolution(),
 					     malloc_wrapper, free_wrapper, debug_printf);
@@ -1513,6 +1514,50 @@ void NetworkInterface::findFlowHosts(u_int16_t vlanId,
       // ntop->getTrace()->traceEvent(TRACE_WARNING, "Too many hosts in interface %s", ifname);
       delete *dst;
       *dst = NULL;
+      return;
+    }
+  }
+}
+/* **************************************************** */
+
+void NetworkInterface::findFlowNetworks(u_int16_t vlanId,
+        Host *cli, Network **cli_network,
+        Host *srv, Network **srv_network) {
+  if(cli)
+      (*cli_network) = networks_hash->get(vlanId, cli->get_local_network_id());
+  else
+      *cli_network = NULL;
+
+  if((*cli_network) == NULL && cli) {
+    if(!networks_hash->hasEmptyRoom()) {
+      *cli_network = *srv_network = NULL;
+      return;
+    }
+
+    (*cli_network) = new Network(this, vlanId, cli->get_local_network_id());
+    if(!networks_hash->add(*cli_network)) {
+      //ntop->getTrace()->traceEvent(TRACE_WARNING, "Too many hosts in interface %s", ifname);
+      delete *cli_network;
+      *cli_network = *srv_network = NULL;
+      return;
+    }
+  }
+
+  if(srv)
+      (*srv_network) = networks_hash->get(vlanId, srv->get_local_network_id());
+  else
+      *srv_network = NULL;
+
+  if((*srv_network) == NULL && srv) {
+    if(!networks_hash->hasEmptyRoom()) {
+      return;
+    }
+
+    (*srv_network) = new Network(this, vlanId, srv->get_local_network_id());
+    if(!networks_hash->add(*srv_network)) {
+      // ntop->getTrace()->traceEvent(TRACE_WARNING, "Too many hosts in interface %s", ifname);
+      delete *srv_network;
+      *srv_network = NULL;
       return;
     }
   }

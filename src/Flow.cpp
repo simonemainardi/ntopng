@@ -30,8 +30,9 @@ Flow::Flow(NetworkInterface *_iface,
 	   time_t _first_seen, time_t _last_seen) : GenericHashEntry(_iface) {
   vlanId = _vlanId, protocol = _protocol, cli_port = _cli_port, srv_port = _srv_port;
   cli2srv_packets = 0, cli2srv_bytes = 0, srv2cli_packets = 0, srv2cli_bytes = 0, cli2srv_last_packets = 0,
-    cli2srv_last_bytes = 0, srv2cli_last_packets = 0, srv2cli_last_bytes = 0,
-    cli_host = srv_host = NULL, ndpi_flow = NULL, badFlow = false, profileId = -1;
+    cli2srv_last_bytes = 0, srv2cli_last_packets = 0, srv2cli_last_bytes = 0;
+  cli_network = srv_network = NULL;
+  cli_host = srv_host = NULL, ndpi_flow = NULL, badFlow = false, profileId = -1;
 
   l7_protocol_guessed = detection_completed = false;
   dump_flow_traffic = false, ndpi_proto_name = NULL,
@@ -71,6 +72,9 @@ Flow::Flow(NetworkInterface *_iface,
   iface->findFlowHosts(_vlanId, cli_mac, _cli_ip, &cli_host, srv_mac, _srv_ip, &srv_host);
   if(cli_host) { cli_host->incUses(); cli_host->incNumFlows(true); }
   if(srv_host) { srv_host->incUses(); srv_host->incNumFlows(false); }
+  iface->findFlowNetworks(_vlanId, cli_host, &cli_network, srv_host, &srv_network);
+  if(cli_network) cli_network->incUses();
+  if(srv_network) srv_network->incUses();
   passVerdict = true;
   first_seen = _first_seen, last_seen = _last_seen;
   categorization.category[0] = '\0', categorization.categorized_requested = false;
@@ -172,6 +176,8 @@ Flow::~Flow() {
 
   if(cli_host)         { cli_host->decUses(); cli_host->decNumFlows(true);  }
   if(srv_host)         { srv_host->decUses(); srv_host->decNumFlows(false); }
+  if(cli_network)      cli_network->decUses();
+  if(srv_network)      srv_network->decUses();
   if(json_info)        free(json_info);
   if(client_proc)      delete(client_proc);
   if(server_proc)      delete(server_proc);
@@ -662,6 +668,7 @@ void Flow::update_hosts_stats(struct timeval *tv) {
   u_int64_t sent_packets, sent_bytes, rcvd_packets, rcvd_bytes;
   u_int64_t diff_sent_packets, diff_sent_bytes, diff_rcvd_packets, diff_rcvd_bytes;
   bool updated = false;
+  bool cli_and_srv_in_same_subnet = false;
 
   if(check_tor) {
     char rsp[256];
@@ -688,12 +695,22 @@ void Flow::update_hosts_stats(struct timeval *tv) {
   prev_srv2cli_last_bytes = srv2cli_last_bytes, prev_srv2cli_last_packets = srv2cli_last_packets;
   srv2cli_last_packets = rcvd_packets, srv2cli_last_bytes = rcvd_bytes;
 
+  if(cli_host->get_local_network_id() >= 0 && (cli_host->get_local_network_id() == srv_host->get_local_network_id()))
+      cli_and_srv_in_same_subnet = true;
+
   if(diff_sent_packets || diff_rcvd_packets) {
     if(cli_host) {
       cli_host->incStats(protocol, ndpi_detected_protocol.protocol,
 			 diff_sent_packets, diff_sent_bytes,
 			 diff_rcvd_packets, diff_rcvd_bytes);
-
+      // update per-subnet byte counters
+      if(!cli_and_srv_in_same_subnet){
+          cli_network->incEgressBytes(diff_sent_bytes);
+          cli_network->incIngressBytes(diff_rcvd_bytes);
+      } else  // client and server ARE in the same subnet
+          // need to update the inner counter (just one time, will intentionally skip this for srv_host)
+          cli_network->incInnerBytes(diff_sent_bytes + diff_rcvd_bytes);
+      
       if(srv_host && cli_host->isLocalHost())
 	cli_host->incHitter(srv_host, diff_sent_bytes, diff_rcvd_bytes);
     }
@@ -703,6 +720,12 @@ void Flow::update_hosts_stats(struct timeval *tv) {
 			 diff_rcvd_packets, diff_rcvd_bytes,
 			 diff_sent_packets, diff_sent_bytes);
 
+      // update per-subnet byte counters
+      if(!cli_and_srv_in_same_subnet){
+          srv_network->incEgressBytes(diff_rcvd_bytes);
+          srv_network->incIngressBytes(diff_sent_bytes);
+      }
+      
       if(cli_host && srv_host->isLocalHost())
 	srv_host->incHitter(cli_host, diff_rcvd_bytes, diff_sent_bytes);
 

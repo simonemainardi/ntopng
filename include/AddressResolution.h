@@ -39,6 +39,7 @@ class AddressResolution {
   void startResolveAddressLoop();
   void resolveHostName(char *numeric_ip, char *rsp = NULL, u_int rsp_len = 0);
 
+  inline u_int8_t get_num_local_networks(){return localNetworks.getNumAddresses();};
   inline char *get_local_network(u_int8_t id) { return localNetworks.getAddressString(id); };
   bool setLocalNetworks(char *rule);
   int16_t findAddress(int family, void *addr); /* if(rc > 0) networdId else notfound */

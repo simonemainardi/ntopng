@@ -32,6 +32,7 @@ typedef struct {
 class Flow : public GenericHashEntry {
  private:
   Host *cli_host, *srv_host;
+  Network *cli_network, *srv_network;
   u_int16_t cli_port, srv_port;
   u_int16_t vlanId;
   u_int8_t protocol, src2dst_tcp_flags, dst2src_tcp_flags;
