@@ -24,7 +24,7 @@
 /* *************************************** */
 
 Network::Network(NetworkInterface *_iface,
-        u_int16_t _vlanId, u_int16_t _networkId) : GenericHashEntry(_iface){
+        u_int16_t _vlanId, int16_t _networkId) : GenericHashEntry(_iface){
     num_uses = 0;
     vlanId = _vlanId;
     networkId = _networkId;
@@ -33,7 +33,11 @@ Network::Network(NetworkInterface *_iface,
 
 /* *************************************** */
 u_int32_t Network::key() {
-  u_int32_t k = vlanId + networkId;
+  u_int32_t k = vlanId;
+  if(networkId < 0)
+      k -= networkId;
+  else
+      k += networkId;
   return(k);
 }
 

@@ -27,7 +27,7 @@
 class NetworkHash : public GenericHash {
  public:
      NetworkHash(NetworkInterface *_iface, u_int _num_hashes, u_int _max_hash_size);
-     Network* get(u_int16_t vlanId, u_int16_t networkId);
+     Network* get(u_int16_t vlanId, int16_t networkId);
 };
 
 

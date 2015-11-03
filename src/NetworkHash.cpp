@@ -30,8 +30,13 @@ NetworkHash::NetworkHash(NetworkInterface *_iface, u_int _num_hashes, u_int _max
 
 /* ************************************ */
 
-Network* NetworkHash::get(u_int16_t vlanId, u_int16_t networkId) {
-  u_int32_t hash = ((vlanId + networkId) % num_hashes);
+Network* NetworkHash::get(u_int16_t vlanId, int16_t networkId) {
+  u_int32_t hash = vlanId;
+  if(networkId < 0)
+      hash -= networkId;
+  else
+      hash += networkId;
+  hash = hash % num_hashes;  
 
   if(table[hash] == NULL) {
     return(NULL);

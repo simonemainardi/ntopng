@@ -1147,6 +1147,17 @@ static int ntop_get_interface_flows_stats(lua_State* vm) {
 
 /* ****************************************** */
 
+static int ntop_get_interface_networks_stats(lua_State* vm) {
+  NetworkInterfaceView *ntop_interface = get_ntop_interface(vm);
+
+  ntop->getTrace()->traceEvent(TRACE_INFO, "%s() called", __FUNCTION__);
+  if(ntop_interface) ntop_interface->getNetworksStats(vm);
+
+  return(CONST_LUA_OK);
+}
+
+/* ****************************************** */
+
 /**
  * @brief Get the host information of network interface.
  * @details Get the ntop interface global variable of lua, the host ip and optional the VLAN id form the lua stack and push a new hash table of hash tables containing the host information into lua stack.
@@ -4076,6 +4087,7 @@ static const luaL_Reg ntop_interface_reg[] = {
   { "getFlowsInfo",           ntop_get_interface_flows_info },
   { "queryFlowsInfo",         ntop_query_interface_flows_info },
   { "getFlowsStats",          ntop_get_interface_flows_stats },
+  { "getNetworksStats",       ntop_get_interface_networks_stats },  
   { "getFlowPeers",           ntop_get_interface_flows_peers },
   { "findFlowByKey",          ntop_get_interface_find_flow_by_key },
   { "dropFlowTraffic",        ntop_drop_flow_traffic },

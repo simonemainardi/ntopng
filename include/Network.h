@@ -28,7 +28,7 @@ class Network : public GenericHashEntry {
  private:
      u_int16_t num_uses;
      u_int16_t vlanId;
-     u_int16_t networkId;
+     int16_t networkId;
      u_int64_t inner_bytes, ingress_bytes, egress_bytes;
  public:
      void incUses() { num_uses++; }
@@ -36,9 +36,12 @@ class Network : public GenericHashEntry {
      void incEgressBytes(u_int64_t bytes){egress_bytes += bytes;};
      void incIngressBytes(u_int64_t bytes){ingress_bytes += bytes;};
      void incInnerBytes(u_int64_t bytes){inner_bytes += bytes;};
-     Network(NetworkInterface *_iface, u_int16_t vlanId, u_int16_t networkId);
+     Network(NetworkInterface *_iface, u_int16_t vlanId, int16_t networkId);
      inline u_int16_t get_vlan_id()           { return(vlanId);        };
-     inline u_int16_t get_network_id()        { return(networkId);     };
+     inline int16_t get_network_id()        { return(networkId);     };
+     u_int64_t getEgressBytes(){return egress_bytes;};
+     u_int64_t getIngressBytes(){return ingress_bytes;};
+     u_int64_t getInnerBytes(){return inner_bytes;};
      u_int32_t key();
      bool idle();
 };

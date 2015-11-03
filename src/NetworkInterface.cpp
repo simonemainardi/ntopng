@@ -1899,6 +1899,56 @@ void NetworkInterface::getFlowsStats(lua_State* vm) {
 
 /* **************************************************** */
 
+static bool network_stats_walker(GenericHashEntry *h, void *user_data) {
+  struct networks_stats **stats_list = (struct networks_stats**)user_data;
+  struct networks_stats *head = *stats_list, *stats = new networks_stats;
+  *stats_list = stats;  // this is the new head (old head is backed up in head)
+  if(!head) // this is the first time we add an element to the list
+      stats->next = NULL;
+  else  // add the element as the head of the list
+      stats->next = head;
+
+  Network *network = (Network*)h;
+
+  stats->networkId = network->get_network_id();
+  stats->vlanId = network->get_vlan_id();
+  stats->egress_bytes = network->getEgressBytes();
+  stats->ingress_bytes = network->getIngressBytes();
+  stats->inner_bytes = network->getInnerBytes();
+  return(false); /* false = keep on walking */
+}
+
+/* **************************************************** */
+
+void NetworkInterface::getNetworksStats(lua_State* vm) {
+  u_int16_t num_networks = getNumNetworks();
+  struct networks_stats *stats = NULL, *aux = NULL;
+
+  networks_hash->walk(network_stats_walker, (void*)&stats);
+
+  lua_newtable(vm);
+  while(stats){
+      lua_newtable(vm);
+      lua_push_int32_table_entry(vm, "networkId", stats->networkId);
+      lua_push_int_table_entry(vm, "vlanId", stats->vlanId);
+      lua_push_int_table_entry(vm, "bytes.ingress", stats->ingress_bytes);
+      lua_push_int_table_entry(vm, "bytes.egress", stats->egress_bytes);
+      lua_push_int_table_entry(vm, "bytes.inner", stats->inner_bytes);      
+      lua_pushinteger(vm, num_networks);
+      lua_insert(vm, -2);
+      lua_settable(vm, -3);
+      aux = stats->next;
+      delete stats;
+      stats = aux;
+      num_networks--;
+  }
+  lua_pushstring(vm, "networks");
+  lua_insert(vm, -2);
+  lua_settable(vm, -3);
+}
+
+/* **************************************************** */
+
 struct flow_peers_info {
   lua_State *vm;
   char *numIP;
@@ -1952,6 +2002,7 @@ u_int NetworkInterface::purgeIdleFlows() {
 /* **************************************************** */
 
 u_int NetworkInterface::getNumFlows()        { return(flows_hash ? flows_hash->getNumEntries() : 0);   };
+u_int NetworkInterface::getNumNetworks()     { return(networks_hash ? networks_hash->getNumEntries() : 0);   };
 u_int NetworkInterface::getNumHosts()        { return(hosts_hash ? hosts_hash->getNumEntries() : 0);   };
 u_int NetworkInterface::getNumHTTPHosts()    { return(hosts_hash ? hosts_hash->getNumHTTPEntries() : 0);   };
 

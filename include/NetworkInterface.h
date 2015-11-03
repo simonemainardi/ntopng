@@ -80,6 +80,13 @@ struct active_flow_stats {
     breeds_bytes[NUM_BREEDS];
 };
 
+struct networks_stats {
+  int16_t networkId;
+  u_int16_t vlanId;
+  u_int64_t ingress_bytes, egress_bytes, inner_bytes;
+  struct networks_stats *next;
+};
+
 #ifdef NTOPNG_PRO
 class L7Policer;
 #endif
@@ -244,6 +251,7 @@ class NetworkInterface {
   void getnDPIProtocols(lua_State *vm);
   void getActiveHostsList(lua_State* vm, vm_ptree *vp, bool host_details, bool local_only);
   void getFlowsStats(lua_State* vm);
+  void getNetworksStats(lua_State* vm);  
   int  retrieve(lua_State* vm, patricia_tree_t *allowed_hosts, char *SQL);
   void getFlowPeersList(lua_State* vm, patricia_tree_t *allowed_hosts, char *numIP, u_int16_t vlanId);
 
@@ -254,6 +262,7 @@ class NetworkInterface {
   inline u_int64_t getNumPackets()  { return(ethStats.getNumPackets());      };
   inline u_int64_t getNumBytes()    { return(ethStats.getNumBytes());        };
   u_int getNumFlows();
+  u_int getNumNetworks();
   u_int getNumHosts();
   u_int getNumHTTPHosts();
 

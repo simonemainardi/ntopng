@@ -60,6 +60,7 @@ else
 end
 
 interface.select(ifname)
+tprint(interface.getNetworksStats())
 
 if((group_col == "mac") or (group_col == "antenna_mac")) then
    hosts_stats = interface.getLocalHostsInfo()
