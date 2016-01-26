@@ -78,7 +78,7 @@ Flow::Flow(NetworkInterface *_iface,
   first_seen = _first_seen, last_seen = _last_seen;
   memset(&categorization.category, 0, sizeof(categorization.category));
   bytes_thpt_trend = trend_unknown, pkts_thpt_trend = trend_unknown;
-  //bytes_rate = new TimeSeries<float>(4096);
+  bytes_rate = new TimeSeries();
   protocol_processed = false, blacklist_alarm_emitted = false;
 
   synTime.tv_sec = synTime.tv_usec = 0,
@@ -203,6 +203,7 @@ Flow::~Flow() {
   if(dns.last_query)   free(dns.last_query);
   if(ssl.certificate)  free(ssl.certificate);
   if(ndpi_proto_name)  free(ndpi_proto_name);
+  if(bytes_rate)       delete(bytes_rate);
 
   deleteFlowMemory();
 }
@@ -788,7 +789,7 @@ void Flow::update_hosts_stats(struct timeval *tv) {
 
   if(last_update_time.tv_sec > 0) {
     float tdiff_msec = ((float)(tv->tv_sec-last_update_time.tv_sec)*1000)+((tv->tv_usec-last_update_time.tv_usec)/(float)1000);
-    //float t_sec = (float)(tv->tv_sec)+(float)(tv->tv_usec)/1000.;
+    float t_sec = (float)(tv->tv_sec)+(float)(tv->tv_usec)/1000.;
 
     if(tdiff_msec >= 1000 /* Do not updated when less than 1 second (1000 msec) */) {
       // bps
@@ -798,9 +799,15 @@ void Flow::update_hosts_stats(struct timeval *tv) {
       if(bytes_msec < 0) bytes_msec = 0; /* Just to be safe */
 
       if((bytes_msec > 0) || iface->is_packet_interface()) {
-        //bytes_rate->addDataPoint(t_sec, bytes_msec);
-        //ntop->getTrace()->traceEvent(TRACE_NORMAL, "Normalized slope is: %.2f", bytes_rate->discreteDerivative(true));
-
+        bytes_rate->addDataPoint(t_sec, bytes_msec);
+#if 0
+        float avg_derivative = bytes_rate->getAvgDerivative(true);
+        float avg_deriv_ewma = bytes_rate->getDerivativeEWMA(true);
+        if(avg_deriv_ewma > 0)
+            ntop->getTrace()->traceEvent(TRACE_NORMAL, "Normalized EWMA is: %.2f", avg_derivative);
+        if(avg_deriv_ewma > 0)
+            ntop->getTrace()->traceEvent(TRACE_NORMAL, "Normalized avg. Derivative is: %.2f", avg_deriv_ewma);
+#endif
 	if(bytes_thpt < bytes_msec)      bytes_thpt_trend = trend_up;
 	else if(bytes_thpt > bytes_msec) bytes_thpt_trend = trend_down;
 	else                             bytes_thpt_trend = trend_stable;
