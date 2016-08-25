@@ -1385,11 +1385,27 @@ void Utils::readMac(char *ifname, dump_mac_t mac_addr) {
 /* **************************************** */
 
 u_int16_t Utils::getIfMTU(const char *ifname) {
-#ifdef WIN32
-  return(CONST_DEFAULT_MTU);
-#else
-  struct ifreq ifr;
   u_int32_t mtu = CONST_DEFAULT_MTU; /* Default MTU */
+
+#ifdef WIN32
+  return mtu;
+
+#elif defined(HAVE_PF_RING) && (defined(__x86_64__) || defined(__i686__))
+  pfring *ring;
+  pfring_card_settings settings;
+
+  ring = pfring_open(device, 1536, PF_RING_PROMISC);
+
+  if(ring){
+    if(pfring_get_card_settings(ring, &settings) == 0)
+      mtu = settings.max_packet_size;
+
+    pfring_close(ring);
+    return(mtu);
+  }
+#endif
+
+  struct ifreq ifr;
   int fd;
 
   memset(&ifr, 0, sizeof(ifr));
@@ -1412,7 +1428,6 @@ u_int16_t Utils::getIfMTU(const char *ifname) {
   }
 
   return((u_int16_t)mtu);
-#endif
 }
 
 /* **************************************** */
