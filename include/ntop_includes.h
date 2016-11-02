@@ -194,6 +194,7 @@ using namespace std;
 #include "HostActivityRetriever.h"
 #include "NetworkInterface.h"
 #include "PcapInterface.h"
+#include "FunctionalTestsInterface.h"
 #include "ViewInterface.h"
 #ifdef HAVE_PF_RING
 #include "PF_RINGInterface.h"

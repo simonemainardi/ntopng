@@ -208,7 +208,7 @@ static void* packetPollLoop(void* ptr) {
 /* **************************************************** */
 
 void PcapInterface::startPacketPolling() { 
-  pthread_create(&pollLoop, NULL, packetPollLoop, (void*)this);  
+  pthread_create(&pollLoop, NULL, packetPollLoop, (void*)this);
   pollLoopCreated = true;
   NetworkInterface::startPacketPolling();
 }

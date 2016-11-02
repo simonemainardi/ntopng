@@ -169,6 +169,7 @@
 #define CONST_INTERFACE_TYPE_DIVERT    "divert"
 #define CONST_INTERFACE_TYPE_DUMMY     "dummy"
 #define CONST_INTERFACE_TYPE_ZC_FLOW   "ZC-flow"
+#define CONST_INTERFACE_TYPE_F_TESTS   "functional tests"
 #define CONST_INTERFACE_TYPE_UNKNOWN   "unknown"
 
 #define CONST_DEMO_MODE_DURATION       600 /* 10 min */
@@ -284,6 +285,7 @@
 #define CONST_DEFAULT_SCRIPTS_DIR    "scripts"
 #define CONST_FLOWACTIVITY_SCRIPT    "flowactivity.lua"
 #define CONST_DEFAULT_CALLBACKS_DIR  "scripts/callbacks"
+#define CONST_DEFAULT_TESTS_LUA_DIR  "tests/lua"
 #define CONST_DEFAULT_USERS_FILE     "ntopng-users.conf"
 #define CONST_DEFAULT_WRITABLE_DIR   "/var/tmp"
 #define CONST_DEFAULT_INSTALL_DIR    (DATA_DIR "/ntopng")

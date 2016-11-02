@@ -147,7 +147,9 @@ int main(int argc, char *argv[])
     try {
       /* [ zmq-collector.lua@tcp://127.0.0.1:5556 ] */
       if(!strcmp(ifName, "dummy")) {
-	iface = new DummyInterface();
+	iface = new DummyInterface();	
+      } else if(!strncmp(ifName, "test:", 5)) {
+	iface = new FunctionalTestsInterface(&ifName[5]);
       } else if(!strncmp(ifName, "view:", 5)) {
 	iface = new ViewInterface(ifName);
       } else if((strstr(ifName, "tcp://") || strstr(ifName, "ipc://"))) {
