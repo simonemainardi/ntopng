@@ -1,6 +1,6 @@
-Note that you need to edit third-party/LuaJIT-X.Y.Z/src/Makefile and change "CC= gcc" into "CC= cc" prior to start the compilation.
+## Building from source
 
-pkg install git wget autoconf autoconf-wrapper automake automake-wrapper fontconfig libtool sqlite3 mysql56-client libxml2 glib gmake bash rrdtool redis pkgconf flex bison sudo GeoIP
+pkg install git wget autoconf autoconf-wrapper automake automake-wrapper fontconfig libtool sqlite3 mysql56-client libxml2 glib gmake rrdtool redis pkgconf flex bison GeoIP
 
 echo 'redis_enable="YES"' >> /etc/rc.conf
 service redis start
@@ -25,4 +25,45 @@ gmake install
 sysctl net.inet6.ip6.v6only=0
 ntopng
 
-Courtesy of Joe Rizzo <jrizzo@rizzos.net>
+Credits: Courtesy of Joe Rizzo <jrizzo@rizzos.net>
+
+## Installing a package
+
+FreeBSD packages are available at:
+ http://packages.ntop.org/FreeBSD/
+
+To install a binary package:
+
+1. Install package dependencies:
+  # pkg install fontconfig sqlite3 mysql56-client rrdtool redis pkgconf flex bison sudo GeoIP
+
+2. Install package
+  # pkg install http://packages.ntop.org/FreeBSD/x64/ntopng/ntopng-X.Y.ZZZZZZZZ.txz
+
+3. Enable redis and ntopng services
+  # echo 'redis_enable="YES"' >> /etc/rc.conf
+  # echo 'ntopng_enable="YES"' >> /etc/rc.conf
+
+4. Configure ntopng service, e.g.,:
+  # echo 'ntopng_flags="-i vtnet0 -i igb0 -i igb1"' >> /etc/rc.conf # To use cli options
+  # echo 'ntopng_flags="/etc/ntopng/ntopng.conf"' >> /etc/rc.conf  # To use a configuration file
+
+5. Start redis
+  # service redis start
+
+4. Start/Stop ntopng
+  # service ntopng start
+  # service ntopng status
+  # service ntopng stop
+
+## pfSense
+
+The binary package can be installed on pfSense following the
+instructions above. If the ntopng web interface is not accessible,
+then very likely pfSense is blocking incoming TCP connections. An
+inspection of the Filter logs will confirm this.
+
+To allow incoming TCP connections on the ntopng server port, a
+firewall rule is required. Set this rule from the pfSense command line
+of from the web interface (menu Firewall / Rules)
+
