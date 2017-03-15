@@ -1942,6 +1942,20 @@ int Utils::numberOfSetBits(u_int32_t i) {
 
 /* ******************************************* */
 
+u_int32_t Utils::string_hash(const char *s) {
+  u_int32_t h = 0;
+
+  if(!s)
+    return 0;
+
+  for (int i = 0; s[i] != '\0'; i++)
+    h = (h + (unsigned char)s[i]);
+
+  return h;
+}
+
+/* ******************************************* */
+
 /*
  * Checksum routine for Internet Protocol family headers (C Version)
  *

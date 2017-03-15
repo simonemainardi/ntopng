@@ -1,9 +1,59 @@
 --
 -- (C) 2014-17 - ntop.org
 --
+require 'class_utils'
+local json = require 'dkjson'
 
--- This file contains the description of all functions
--- used to trigger host alerts
+Alert = class(function(al, source_type, source_value, target_type, target_value)
+      al.header = {
+	 source_type = source_type,
+	 source_value = source_value,
+	 target_type = target_type,
+	 target_value = target_value,
+	 alert_type = 'generic',
+	 alert_severity = 'unknown',
+	 alert_id = nil,
+	 timestamp = os.time()
+      }
+end)
+
+function Alert:engage(alert_id)
+   self.header.status = 'engaged'
+   if alert_id then
+      self.header.alert_id = alert_id
+   end
+end
+
+function Alert:release(alert_id)
+   self.header.status = 'released'
+   if alert_id then
+      self.header.alert_id = alert_id
+   end
+end
+
+function Alert:addFlow(f)
+   if f.dump() then
+      self.flow_detail = f.dump()
+   end
+end
+
+function Alert:typeThresholdCross(time_granularity, metric, threshold, operator, actual_value)
+   self.header.alert_type = 'threshold_cross'
+   self.header.alert_severity = 'warning'
+   self.header.alert_id = time_granularity..'_'..metric
+   self.alert_detail = {time_granularity=time_granularity,
+			metric=metric, threshold=threshold, operator=operator, actual_value=actual_value}
+end
+
+function Alert:typeMalwareSiteAccess(host_server_name)
+   self.header.alert_type = 'malware_access'
+   self.header.alert_severity = 'error'
+   self.alert_detail = {host_server_name=host_server_name}
+end
+
+function Alert:__tostring()
+   return json.encode(self)
+end
 
 local verbose = false
 

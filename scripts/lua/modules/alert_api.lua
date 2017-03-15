@@ -1,57 +1,73 @@
 --
 -- (C) 2014-17 - ntop.org
 --
+
+require 'lua_utils'
+require 'class_utils'
+
+InterfaceAlert = class(Alert, function(c, ifid, alert_type)
+			  Alert.init(c, 'interface', ifid, nil, nil, alert_type)
+end)
+
+HostAlert = class(Alert, function(c, source_host, source_vlan, alert_type)
+		     local src = hostinfo2hostkey({host=source_host, vlan=source_vlan})
+		     Alert.init(c, 'host', src, nil, nil, alert_type)
+end)
+
+FlowAlert = class(Alert, function(c, source_host, source_vlan, dst_host, dst_vlan, alert_type)
+		     local src = hostinfo2hostkey({host=source_host, vlan=source_vlan})
+		     local dst = hostinfo2hostkey({host=dst_host, vlan=dst_vlan})
+		     Alert.init(c, 'host', src, 'host', dst, alert_type)
+end)
+
 --[[
-This file contains an API the programmer can use to generate custom alerts
 
-ntopng alerts are a very generic concept that are represented using lua tables.
-The only two mandatory keys that must exist in every alert lua table are 'alert_level'
-and 'alert_type', respectively. The remaining keys are custom and a user can choose
-to save as many fields as he/she wish.
+EXAMPLES
 
-'alert_type' must be an integer number that uniquely identifies the alert type.
-This integer number can be obtained using the helper function alertType as follows:
+require 'alert_utils'
+require 'alert_api'
 
-alertType("under_attack"))
-alertType("tcp_syn_flood"))
-alertType("flows_flood"))
+local nn = os.time()
 
-'alert_severity' must be an integer number that uniquely identifies the alert severity.
-This integer number can be obtained using the helper function alertSeverity as follows:
+ia = InterfaceAlert(1)
+ia:typeThresholdCross('minute', 'bytes', 10, '>', 20)
+-- tprint(tostring(ia))
 
-Alerts are fired using function fire_alert that takes the interface id as the first argument
-and the alert lua table as the second argument.
+ha = HostAlert('192.168.2.0', 1)
+ha:typeThresholdCross('hour', 'packets', 500, '<', 30)
+ha2 = HostAlert('10.0.0.0', 0)
+ha2:typeThresholdCross('minute', 'bytes', 500, '<', 30)
+-- tprint(tostring(ha))
 
-alertSeverity("info")
-alertSeverity("warning")
-alertSeverity("error")
+fa = FlowAlert('192.168.2.1', 1, '192.168.2.2', 1)
+fa:typeMalwareSiteAccess('www.abadyguy.com')
+interface.alert(tostring(fa))
+-- tprint(tostring(fa))
+
+if nn % 10 == 0 then
+   print("engaging!")
+
+   ia:engage()
+   interface.alert(tostring(ia))
 
 
-Examples of alerts generation are:
+   ha:engage()
+   interface.alert(tostring(ha))
 
-fire_alert(0,
-	   {['ifid']=0,
-	      ['alert_type']=alertType("under_attack"),
-	      ['alert_severity']=alertSeverity("warning"),
-	      ['seen']=os.time(), ['msg']="this is a test alert"})
+   ha2:engage()
+   interface.alert(tostring(ha2))
 
-fire_alert(0, {['ifid']=0, ['alert_type']=2, ['alert_severity']=1, ['custom_field']=os.time(), ['custom_info']="test"})
+elseif nn % 10 == 5 then
+   print("releasing!")
+
+   ia:release()
+   interface.alert(tostring(ia))
+
+   ha:release()
+   interface.alert(tostring(ha))
+
+   ha2:release()
+   interface.alert(tostring(ha2))
+end
+
 --]]
-
-dirs = ntop.getDirs()
-package.path = dirs.installdir .. "/scripts/lua/modules/?.lua;" .. package.path
-
-if (ntop.isPro()) then
-  package.path = dirs.installdir .. "/pro/scripts/callbacks/?.lua;" .. package.path
-end
-
-require "lua_utils"
-
-function fire_alert(ifid, alert)
-   ntop.storeAlert(ifid, alert)
-end
-
---fire_alert(0, {['ifid']=0, ['alert_type']=2, ['alert_severity']=1, ['seen']=os.time(), ['msg']="simone"})
---tprint(alertSeverity("warning"))
---tprint(alertType("under_attack"))
-

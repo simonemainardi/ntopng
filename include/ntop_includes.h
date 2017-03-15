@@ -196,6 +196,7 @@ using namespace std;
 #include "ElasticSearch.h"
 #include "StoreManager.h"
 #include "StatsManager.h"
+#include "Alert.h"
 #include "AlertsManager.h"
 #include "DB.h"
 #include "MySQLDB.h"

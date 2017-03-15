@@ -25,9 +25,14 @@
 #include "ntop_includes.h"
 
 class Flow;
+class SPSCQueue;
 
-class AlertsManager : protected StoreManager {
+class AlertsManager : protected StoreManager, protected GenericHash {
  private:
+  SPSCQueue *alertsQueue;
+  pthread_t dequeueThreadLoop;
+  Mutex producersMutex;
+
   char queue_name[CONST_MAX_LEN_REDIS_KEY];
   bool store_opened, store_initialized;
   u_int32_t num_alerts_engaged;
@@ -100,7 +105,22 @@ class AlertsManager : protected StoreManager {
 
  public:
   AlertsManager(int interface_id, const char *db_filename);
-  ~AlertsManager() {};
+  virtual ~AlertsManager();
+
+  virtual void *dequeueLoop();
+  void startDequeueLoop();
+
+  int enqueue(const char *json_alert);
+
+  int processDequeuedAlert(const char *json_alert);
+  int engageAlert(Alert *a);
+  int releaseAlert(Alert *a);
+  int storeAlert(Alert *a);
+
+  Alert *getEngaged(Alert *a);
+  bool isEngaged(Alert *a);
+  bool setEngaged(Alert *a);
+  bool setReleased(Alert *a);
 
 #ifdef NOTUSED
   int storeAlert(AlertType alert_type, AlertLevel alert_severity, const char *alert_json);

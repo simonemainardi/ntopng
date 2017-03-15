@@ -90,6 +90,7 @@ class Utils {
   static u_int32_t macHash(u_int8_t *mac);
   static bool isSpecialMac(u_int8_t *mac);
   static int numberOfSetBits(u_int32_t i);
+  static u_int32_t string_hash(const char *s);
   static u_int32_t in_cksum(unsigned char *buf, unsigned nbytes, u_int32_t sum);
   static u_int32_t wrapsum(u_int32_t sum);
 

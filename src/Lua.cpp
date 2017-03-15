@@ -5018,6 +5018,25 @@ static int ntop_interface_get_cached_num_alerts(lua_State* vm) {
 
 /* ****************************************** */
 
+static int ntop_interface_alert(lua_State* vm) {
+  NetworkInterface *iface = getCurrentInterface(vm);
+  AlertsManager *am;
+  char *json_alert = NULL;
+
+  ntop->getTrace()->traceEvent(TRACE_DEBUG, "%s() called", __FUNCTION__);
+
+  if(!iface || !(am = iface->getAlertsManager()))
+    return (CONST_LUA_ERROR);
+
+  if(ntop_lua_check(vm, __FUNCTION__, 1, LUA_TSTRING)) return(CONST_LUA_ERROR);
+
+  json_alert = strdup(lua_tostring(vm, 1));
+
+  return (!am->enqueue(json_alert)) ? CONST_LUA_OK : CONST_LUA_ERROR;
+}
+
+/* ****************************************** */
+
 static int ntop_interface_make_room_alerts(lua_State* vm) {
   NetworkInterface *ntop_interface = getCurrentInterface(vm);
   int alert_entity;
@@ -5614,6 +5633,8 @@ static const luaL_Reg ntop_interface_reg[] = {
   { "getFlowDeviceInfo",  ntop_getflowdeviceinfo },
 
   /* New generation alerts */
+  { "alert",                ntop_interface_alert                    },
+
   { "getCachedNumAlerts",   ntop_interface_get_cached_num_alerts    },
   { "queryAlertsRaw",       ntop_interface_query_alerts_raw         },
   { "queryFlowAlertsRaw",   ntop_interface_query_flow_alerts_raw    },
