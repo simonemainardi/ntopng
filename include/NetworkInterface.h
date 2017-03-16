@@ -363,7 +363,7 @@ class NetworkInterface {
   void runHousekeepingTasks();
   Mac*  getMac(u_int8_t _mac[6], u_int16_t vlanId, bool createIfNotPresent);
   Host* getHost(char *host_ip, u_int16_t vlan_id);
-  bool getHostInfo(lua_State* vm, AddressTree *allowed_hosts, char *host_ip, u_int16_t vlan_id);
+  bool getHostInfo(lua_State* vm, AddressTree *allowed_hosts, char *host_ip, u_int16_t vlan_id, bool host_details = true, bool verbose = true);
   bool loadHostAlertPrefs(lua_State* vm, AddressTree *allowed_hosts, char *host_ip, u_int16_t vlan_id);
   bool correlateHostActivity(lua_State* vm, AddressTree *allowed_hosts, char *host_ip, u_int16_t vlan_id);
   bool similarHostActivity(lua_State* vm, AddressTree *allowed_hosts, char *host_ip, u_int16_t vlan_id);
@@ -465,7 +465,13 @@ class NetworkInterface {
   inline void incAlertLevel()               { alertLevel++;                        }
   inline void decAlertLevel()               { if(--alertLevel < 0) alertLevel = 0; }
   inline int8_t getAlertLevel()             { return(alertLevel);                  }
+  inline u_int32_t getHostEngagedAlertsCounter(Host *h) {
+    if(alertsManager)
+      return alertsManager->getNumEngagedAlerts(h);
+    return 0;
+  };
   bool incDecHostEngagedAlertsCounter(const char *key, bool increase);
+
 #ifdef NTOPNG_PRO
   virtual void addIPToLRUMatches(u_int32_t client_ip, u_int16_t user_pool_id,
 				 char *label, int32_t lifetime_sec) { ; };

@@ -2314,14 +2314,22 @@ void NetworkInterface::updateFlowProfiles() {
 
 bool NetworkInterface::getHostInfo(lua_State* vm,
 				   AddressTree *allowed_hosts,
-				   char *host_ip, u_int16_t vlan_id) {
+				   char *host_ip, u_int16_t vlan_id,
+				   bool host_details, bool verbose) {
+  bool ret = false;
+
+  disablePurge(false);
+
   Host *h = findHostsByIP(allowed_hosts, host_ip, vlan_id);
 
   if(h) {
-    h->lua(vm, allowed_hosts, true, true, true, false, false);
-    return(true);
-  } else
-    return(false);
+    h->lua(vm, allowed_hosts, host_details, verbose, true, false, false);
+    ret = true;
+  }
+
+  enablePurge(false);
+
+  return(ret);
 }
 
 /* **************************************************** */

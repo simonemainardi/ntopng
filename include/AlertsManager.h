@@ -120,6 +120,9 @@ class AlertsManager : protected StoreManager, protected GenericHash {
   int releaseAlert(Alert *a);
   int storeAlert(Alert *a);
 
+  inline u_int32_t getNumEngagedAlerts() { return getCurrentSize(); };
+  u_int32_t getNumEngagedAlerts(Host *h);
+
   void incDecEngagedAlertsCounters(Alert *a, bool increase);
 #ifdef NOTUSED
   int storeAlert(AlertType alert_type, AlertLevel alert_severity, const char *alert_json);

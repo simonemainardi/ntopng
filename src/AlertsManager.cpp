@@ -126,6 +126,65 @@ int AlertsManager::processInactive() {
 
 /* **************************************************** */
 
+struct engaged_count_info {
+  char *type, *value;
+  u_int num_matches;
+};
+
+/* **************************************************** */
+
+static bool count_walker(GenericHashEntry *alert, void *user_data) {
+  struct engaged_count_info *count_info = (struct engaged_count_info*)user_data;
+  Alert *a = (Alert*)alert;
+
+  if(!count_info)
+    return(true);
+  
+  if(!a)
+    return(false);
+
+  if(a->getHeaderField("source_type") && count_info->type
+     && a->getHeaderField("source_value") && count_info->value
+     && !strcmp(a->getHeaderField("source_value"), count_info->value))
+    count_info->num_matches++;
+
+  if(a->getHeaderField("target_type") && count_info->type
+     && a->getHeaderField("target_value") && count_info->value
+     && !strcmp(a->getHeaderField("target_value"), count_info->value))
+    count_info->num_matches++;
+
+  return(false); /* false = keep on walking */
+}
+
+/* **************************************************** */
+
+u_int32_t AlertsManager::getNumEngagedAlerts(Host *h) {
+  u_int32_t ret = 0;
+  struct engaged_count_info count_info;
+  char host_buf[64];
+  char *host_ip = NULL;
+
+  if(!h || ! h->get_ip())
+    return ret;
+
+  host_ip = h->get_ip()->print(host_buf, sizeof(host_buf));
+  if(host_ip && h->get_vlan_id())
+    sprintf(&host_ip[strlen(host_ip)], "@%i", h->get_vlan_id());    
+
+  count_info.type = (char*)"host", count_info.value = host_ip;
+  count_info.num_matches = 0;
+
+  disablePurge(); /* We're concurrent with the dequeueLoop */
+
+  walk(count_walker, &count_info);
+
+  enablePurge();
+
+  return ret;
+}
+
+/* **************************************************** */
+
 int AlertsManager::engageAlert(Alert *alert) {
   int rc;
   sqlite3_stmt *stmt = NULL;

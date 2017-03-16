@@ -1631,6 +1631,8 @@ static int ntop_get_interface_host_info(lua_State* vm) {
   char *host_ip;
   u_int16_t vlan_id = 0;
   char buf[64];
+  bool host_details, verbose;
+  host_details = verbose = true;
 
   ntop->getTrace()->traceEvent(TRACE_DEBUG, "%s() called", __FUNCTION__);
 
@@ -1639,8 +1641,10 @@ static int ntop_get_interface_host_info(lua_State* vm) {
 
   /* Optional VLAN id */
   if(lua_type(vm, 2) == LUA_TNUMBER) vlan_id = (u_int16_t)lua_tonumber(vm, 2);
+  if(lua_type(vm, 3) == LUA_TBOOLEAN) host_details = (u_int16_t)lua_toboolean(vm, 3);
+  if(lua_type(vm, 4) == LUA_TBOOLEAN) verbose = (u_int16_t)lua_toboolean(vm, 4);
 
-  if((!ntop_interface) || !ntop_interface->getHostInfo(vm, get_allowed_nets(vm), host_ip, vlan_id))
+  if((!ntop_interface) || !ntop_interface->getHostInfo(vm, get_allowed_nets(vm), host_ip, vlan_id, host_details, verbose))
     return(CONST_LUA_ERROR);
   else
     return(CONST_LUA_OK);

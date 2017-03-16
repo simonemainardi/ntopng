@@ -5,16 +5,27 @@
 require 'lua_utils'
 require 'class_utils'
 
-InterfaceAlert = class(Alert, function(c, ifid, alert_type)
+InterfaceAlert = class(Alert, function(c, ifid)
 			  Alert.init(c, 'interface', ifid, nil, nil, alert_type)
 end)
 
-HostAlert = class(Alert, function(c, source_host, source_vlan, alert_type)
-		     local src = hostinfo2hostkey({host=source_host, vlan=source_vlan})
-		     Alert.init(c, 'host', src, nil, nil, alert_type)
+HostAlert = class(Alert, function(c, hostkey)
+		     local hostinfo = interface.getHostInfo(hostkey, nil, false, false)
+		     local src = hostkey
+
+		     if not isEmptyString(src) then
+			src = src:gsub('@0', '')
+		     end
+
+		     -- JSON for the source detail
+		     if hostinfo ~= nil and type(hostinfo) == "table" then
+			c.source_detail = hostinfo
+		     end
+
+		     Alert.init(c, 'host', src, nil, nil)
 end)
 
-FlowAlert = class(Alert, function(c, source_host, source_vlan, dst_host, dst_vlan, alert_type)
+FlowAlert = class(Alert, function(c, source_host, source_vlan, dst_host, dst_vlan)
 		     local src = hostinfo2hostkey({host=source_host, vlan=source_vlan})
 		     local dst = hostinfo2hostkey({host=dst_host, vlan=dst_vlan})
 		     Alert.init(c, 'host', src, 'host', dst, alert_type)

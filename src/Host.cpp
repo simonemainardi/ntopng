@@ -195,6 +195,10 @@ void Host::initialize(u_int8_t _mac[6], u_int16_t _vlanId, bool init_all) {
 
 	deserialize(json, redis_key);
 	localHost = shadow_localHost, systemHost = shadow_systemHost;
+
+	if(num_alerts_engaged > 0 && iface) /* No need to refresh if num_alerts_engaged was zero */
+	  num_alerts_engaged = iface->getHostEngagedAlertsCounter(this);
+
       }
 
       if(json) free(json);
@@ -448,7 +452,7 @@ void Host::lua(lua_State* vm, AddressTree *ptree,
 
   lua_push_bool_table_entry(vm, "privatehost", isPrivateHost());
 
-  lua_push_int_table_entry(vm, "num_alerts", triggerAlerts() ? getNumAlerts() : 0);
+  lua_push_int_table_entry(vm, "num_alerts", getNumAlerts());
   if(host_details) {
     /*
       This has been disabled as in case of an attack, most hosts do not have a name and we will waste
@@ -672,7 +676,6 @@ char* Host::get_name(char *buf, u_int buf_len, bool force_resolution_if_not_foun
 bool Host::idle() {
   if((num_uses > 0)
      || (!iface->is_purge_idle_interface())
-     || getNumAlerts() > 0 /* Do not purge hosts that have currently engaged alerts */
      )
     return(false);
 
@@ -843,6 +846,7 @@ json_object* Host::getJSONObject() {
     json_object_object_add(my_object, "userActivities", user_activities->getJSONObject());
 
   /* Generic Host */
+  json_object_object_add(my_object, "num_alerts_engaged", json_object_new_int(getNumAlerts()));
   json_object_object_add(my_object, "sent", sent.getJSONObject());
   json_object_object_add(my_object, "rcvd", rcvd.getJSONObject());
   json_object_object_add(my_object, "ndpiStats", ndpiStats->getJSONObject(iface));
@@ -907,6 +911,8 @@ bool Host::deserialize(char *json_str, char *key) {
   if(json_object_object_get_ex(o, "mac_address", &obj)) set_mac((char*)json_object_get_string(obj));
   if(json_object_object_get_ex(o, "asn", &obj)) asn = json_object_get_int(obj);
   if(json_object_object_get_ex(o, "source_id", &obj)) source_id = json_object_get_int(obj);
+
+  if(json_object_object_get_ex(o, "num_alerts_engaged", &obj)) num_alerts_engaged = json_object_get_int(obj);
 
   if(json_object_object_get_ex(o, "symbolic_name", &obj))  { if(symbolic_name) free(symbolic_name); symbolic_name = strdup(json_object_get_string(obj)); }
   if(json_object_object_get_ex(o, "country", &obj))        { if(country) free(country); country = strdup(json_object_get_string(obj)); }
