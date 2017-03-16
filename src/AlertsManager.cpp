@@ -517,13 +517,24 @@ AlertsManager::~AlertsManager() {
 
 /* **************************************************** */
 
+bool AlertsManager::initEngaged(Alert *a) {
+  /* This method is public as it must be called from a static non-member
+   callback. For this reason hash_initialized is used to prevent calls 
+  from outside initEngaged() to have effect. */
+  return hash_initialized || setEngaged(a);
+}
+
+/* **************************************************** */
+
 static int init_engaged_alerts_callback(void *data, int argc, char **argv, char **azColName) {
   AlertsManager *am = (AlertsManager*)data;
   int json_index = 0; /* Make sure it's the first column in the select statement! */
 
   if(am) {
     Alert alert(argv[json_index]);
-    am->engageAlert(&alert);
+    /* Don't write to the db, just update the cache. The alert is, by definition,
+     already in the db as this method is called from a db query. */
+    am->initEngaged(&alert);
   }
 
   return 0;
@@ -556,6 +567,7 @@ int AlertsManager::initEngaged() {
     }
 
     rc = 0;
+    hash_initialized = true;
   out:
 
     return rc;
@@ -610,6 +622,7 @@ AlertsManager::AlertsManager(NetworkInterface *network_interface, const char *fi
   if((alertsQueue = new SPSCQueue()) == NULL)
     throw "Not enough memory";
 
+  hash_initialized = false; /* set to true by initEngaged */
   initEngaged();
 }
 

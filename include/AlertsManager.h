@@ -35,6 +35,7 @@ class AlertsManager : protected StoreManager, protected GenericHash {
 
   char queue_name[CONST_MAX_LEN_REDIS_KEY];
   bool store_opened, store_initialized;
+  bool hash_initialized;
   u_int32_t num_alerts_engaged;
   bool alerts_stored;
   bool make_room;
@@ -112,6 +113,7 @@ class AlertsManager : protected StoreManager, protected GenericHash {
 
   virtual void *dequeueLoop();
   void startDequeueLoop();
+  bool initEngaged(Alert *a);
 
   int enqueue(const char *json_alert);
 
