@@ -87,8 +87,8 @@ local  en = {
    show_alerts = {
       alerts = "Alerts",
       engaged_alerts = "Engaged Alerts",
-      past_alerts = "Past Alerts",
-      flow_alerts = "Flow Alerts",
+      closed_alerts = "Closed Alerts",
+      stored_alerts = "Stored Alerts",
       older_5_minutes_ago = "older than 5 minutes ago",
       older_30_minutes_ago = "older than 30 minutes ago",
       older_1_hour_ago = "older than 1 hour ago",
@@ -116,8 +116,8 @@ local  en = {
    },
 
    alerts_dashboard = {
-      flow_alert_origins  = "Flow Alert Origins",
-      flow_alert_targets  = "Flow Alert Targets",
+      flow_alert_origins  = "Alert Origins",
+      flow_alert_targets  = "Alert Targets",
       engaged_for_longest = "Engaged for Longest",
       starting_on = "starting on",
       total_alerts = "Total Alerts",

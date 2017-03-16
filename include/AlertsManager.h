@@ -85,9 +85,6 @@ class AlertsManager : protected StoreManager, protected GenericHash {
 				  AlertType alert_type, AlertLevel alert_severity, const char *alert_json,
 				  bool engage);
 
-  /* methods used to retrieve alerts and counters with possible sql clause to filter */
-  int queryAlertsRaw(lua_State *vm, const char *selection, const char *clauses, const char *table_name);
-
   int getAlerts(lua_State* vm, AddressTree *allowed_hosts,
 		u_int32_t start_offset, u_int32_t end_offset,
 		bool engaged, const char *sql_where_clause);
@@ -239,16 +236,8 @@ class AlertsManager : protected StoreManager, protected GenericHash {
    */
   int deleteAlerts(bool engaged, AlertEntity alert_entity, const char *alert_entity_value, AlertType alert_type, time_t older_than);
 
-  /*
-    ========== raw API ======
-  */
-  inline int queryAlertsRaw(lua_State *vm, bool engaged, const char *selection, const char *clauses) {
-    return queryAlertsRaw(vm, selection, clauses,
-			  engaged ? ALERTS_MANAGER_ENGAGED_TABLE_NAME : ALERTS_MANAGER_TABLE_NAME);
-  };
-  inline int queryFlowAlertsRaw(lua_State *vm, const char *selection, const char *clauses) {
-    return queryAlertsRaw(vm, selection, clauses, ALERTS_MANAGER_FLOWS_TABLE_NAME);
-  };
+  /* Method used to retrieve alerts and counters with possible sql clause to filter */
+  int queryAlertsRaw(lua_State *vm, const char *selection, const char *clauses);
 
   /* Following are the legacy methods that were formally global to the whole ntopng */
 #ifdef NOTUSED

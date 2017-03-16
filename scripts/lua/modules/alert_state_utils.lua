@@ -57,7 +57,7 @@ function get_threshold_alert_id(timespan, metric)
    end
 
    -- the alert is identified by a mandatory type
-   local alert_type = 2 -- for the type see alert_type_keys in lua_utils.lua
+   local alert_type = "threshold_cross"
    local key = "type_"..tostring(alert_type)
    -- and an optional id that uniquely represent an alert within its type
    if tostring(alert_id) ~= nil and tostring(alert_id) ~= "" then

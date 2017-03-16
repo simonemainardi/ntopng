@@ -729,6 +729,29 @@ end
 
 -- #################################
 
+-- Filter a query result, returning only matches with host direction type
+function alertsQueryFilterHostsLocal(res, flowhosts_type)
+   --[[TODO
+   if flowhosts_type == "local_only" then
+      aggregation = aggregation.." and cli_localhost = 1 and srv_localhost = 1 "
+   elseif flowhosts_type == "remote_only" then
+      aggregation = aggregation.." and cli_localhost = 0 and srv_localhost = 0 "
+   elseif flowhosts_type == "local_origin_remote_target" then
+      aggregation =  aggregation.." and cli_localhost = 1 and srv_localhost = 0 "
+   elseif flowhosts_type == "remote_origin_local_target" then
+      aggregation =  aggregation.." and cli_localhost = 0 and srv_localhost = 1 "
+   end]]
+   return r
+end
+
+-- #################################
+
+-- what:
+--    - engaged: engaged alerts only
+--    - historical: released alerts only
+--    - historical-flows: historical alerts only
+--    - *: any alert
+
 function performAlertsQuery(statement, what, opts)
    local wargs = {"WHERE", "1=1"}
 
@@ -736,28 +759,30 @@ function performAlertsQuery(statement, what, opts)
       wargs[#wargs+1] = 'AND rowid = '..(opts.row_id)
    end
 
+   if what == "engaged" then
+      wargs[#wargs+1] = 'AND is_engaged = 1'
+   elseif what == "historical" then
+      wargs[#wargs+1] = 'AND is_engaged = 0'
+      wargs[#wargs+1] = 'AND alert_tstamp_end is not null'
+   elseif what == "historical-flows" then
+      wargs[#wargs+1] = 'AND is_engaged = 0'
+      wargs[#wargs+1] = 'AND alert_tstamp_end is null'
+   end
+
+   -- entity parameter semantic is 'any between source_entity and destination_entity'
    if (not isEmptyString(opts.entity)) and (not isEmptyString(opts.entity_val)) then
-      if((what == "historical-flows") and (alertEntityRaw(opts.entity) == "host")) then
-         -- need to handle differently for flows table
-         local info = hostkey2hostinfo(opts.entity_val)
-         wargs[#wargs+1] = 'AND (cli_addr="'..(info.host)..'" OR srv_addr="'..(info.host)..'")'
-         wargs[#wargs+1] = 'AND vlan_id='..(info.vlan)
-      else
-         wargs[#wargs+1] = 'AND alert_entity = "'..(opts.entity)..'"'
-         wargs[#wargs+1] = 'AND alert_entity_val = "'..(opts.entity_val)..'"'
-      end
+      wargs[#wargs+1] = 'AND ((source_type = "'..(opts.entity)..'" AND source_value = "'..(opts.entity_val)..'") OR'
+      wargs[#wargs+1] = '     (target_type = "'..(opts.entity)..'" AND target_value = "'..(opts.entity_val)..'"))'
    end
 
    if not isEmptyString(opts.origin) then
-      local info = hostkey2hostinfo(opts.origin)
-      wargs[#wargs+1] = 'AND cli_addr="'..(info.host)..'"'
-      wargs[#wargs+1] = 'AND vlan_id='..(info.vlan)
+      wargs[#wargs+1] = 'AND source_type = "host"'
+      wargs[#wargs+1] = 'AND source_value = "'..opts.origin..'"'
    end
 
    if not isEmptyString(opts.target) then
-      local info = hostkey2hostinfo(opts.target)
-      wargs[#wargs+1] = 'AND srv_addr="'..(info.host)..'"'
-      wargs[#wargs+1] = 'AND vlan_id='..(info.vlan)
+      wargs[#wargs+1] = 'AND target_type = "host"'
+      wargs[#wargs+1] = 'AND target_value = "'..opts.target..'"'
    end
 
    if tonumber(opts.epoch_begin) ~= nil then
@@ -768,30 +793,12 @@ function performAlertsQuery(statement, what, opts)
       wargs[#wargs+1] = 'AND alert_tstamp <= '..(opts.epoch_end)
    end
 
-   if not isEmptyString(opts.flowhosts_type) then
-      if opts.flowhosts_type ~= "all_hosts" then
-         local cli_local, srv_local = 0, 0
-
-         if opts.flowhosts_type == "local_only" then cli_local, srv_local = 1, 1
-         elseif opts.flowhosts_type == "remote_only" then cli_local, srv_local = 0, 0
-         elseif opts.flowhosts_type == "local_origin_remote_target" then cli_local, srv_local = 1, 0
-         elseif opts.flowhosts_type == "remote_origin_local_target" then cli_local, srv_local = 0, 1
-         end
-
-         if what == "historical-flows" then
-            wargs[#wargs+1] = "AND cli_localhost = "..cli_local
-            wargs[#wargs+1] = "AND srv_localhost = "..srv_local
-         end
-         -- TODO cannot apply it to other tables right now
-      end
+   if opts.alert_type ~= nil then
+      wargs[#wargs+1] = "AND alert_type = '"..(opts.alert_type).."'"
    end
 
-   if tonumber(opts.alert_type) ~= nil then
-      wargs[#wargs+1] = "AND alert_type = "..(opts.alert_type)
-   end
-
-   if tonumber(opts.alert_severity) ~= nil then
-      wargs[#wargs+1] = "AND alert_severity = "..(opts.alert_severity)
+   if opts.alert_severity ~= nil then
+      wargs[#wargs+1] = "AND alert_severity = '"..(opts.alert_severity).."'"
    end
 
    if((not isEmptyString(opts.sortColumn)) and (not isEmptyString(opts.sortOrder))) then
@@ -814,6 +821,7 @@ function performAlertsQuery(statement, what, opts)
       wargs[#wargs+1] = string.upper(opts.sortOrder)
    end
 
+   --[[ TODO avoid pagination here when manually performing filters ]]
    -- pagination
    if((tonumber(opts.perPage) ~= nil) and (tonumber(opts.currentPage) ~= nil)) then
       local to_skip = (tonumber(opts.currentPage)-1) * tonumber(opts.perPage)
@@ -825,26 +833,15 @@ function performAlertsQuery(statement, what, opts)
    local res
 
    -- Uncomment to debug the queries
-   --~ tprint(statement.." (from "..what..") "..query)
+   tprint(statement.." (FROM alerts) "..query)
 
-   if what == "engaged" then
-      res = interface.queryAlertsRaw(true, statement, query)
+   res = interface.queryAlertsRaw(statement, query)
 
-   elseif what == "historical" then
-      res = interface.queryAlertsRaw(false, statement, query)
-   elseif what == "historical-flows" then
-      res = interface.queryFlowAlertsRaw(statement, query)
-   else
-      error("Invalid alert subject: "..what)
-   end
-
-   -- trigger counters refresh
-   if trimSpace(statement:lower()) == "delete" then
-      -- keep counters in sync only for engaged alerts
-      if what == "engaged" then
-	 refreshHostsEngagedAlertsCounters()
+   if not isEmptyString(opts.flowhosts_type) then
+      if opts.flowhosts_type ~= "all_hosts" then
+         alertsQueryFilterHostsLocal(res, opts.flowhosts_type)
+         -- TODO limit and pagination here
       end
-      interface.refreshNumAlerts()
    end
 
    return res
@@ -869,8 +866,8 @@ function refreshHostsEngagedAlertsCounters(host_vlan)
       end
    end
 
-   local res = interface.queryAlertsRaw(true, "select alert_entity_val, count(*) cnt",
-					"where alert_entity="..alertEntity("host")
+   local res = interface.queryAlertsRaw("select alert_entity_val, count(*) cnt",
+					"where alert_entity=".."host"
 					   .. " group by alert_entity_val having cnt > 0")
 
    if res == nil then res = {} end
@@ -998,25 +995,25 @@ local function drawDropdown(status, selection_name, active_entry, entries_table)
    if status == "historical-flows" then
 
       if selection_name == "severity" then
-	 actual_entries = interface.queryFlowAlertsRaw("select alert_severity id, count(*) count", "group by alert_severity")
+	 actual_entries = interface.queryAlertsRaw("select alert_severity id, count(*) count", "where is_engaged = 0 and alert_tstamp_end is null group by alert_severity")
       elseif selection_name == "type" then
-	 actual_entries = interface.queryFlowAlertsRaw("select alert_type id, count(*) count", "group by alert_type")
+	 actual_entries = interface.queryAlertsRaw("select alert_type id, count(*) count", "where is_engaged = 0 and alert_tstamp_end is null group by alert_type")
       end
 
-   else -- dealing with non flow alerts (engaged and closed)
-      local engaged
-      if status == "engaged" then
-	 engaged = true
-      elseif status == "historical" then
-	 engaged = false
-      end
+   elseif status == "engaged" then
 
       if selection_name == "severity" then
-	 actual_entries = interface.queryAlertsRaw(engaged, "select alert_severity id, count(*) count", "group by alert_severity")
+	 actual_entries = interface.queryAlertsRaw("select alert_severity id, count(*) count", "where is_engaged = 1 group by alert_severity")
       elseif selection_name == "type" then
-	 actual_entries = interface.queryAlertsRaw(engaged, "select alert_type id, count(*) count", "group by alert_type")
+	 actual_entries = interface.queryAlertsRaw("select alert_type id, count(*) count", "where is_engaged = 1 group by alert_type")
       end
 
+   else -- status == "historical"
+      if selection_name == "severity" then
+	 actual_entries = interface.queryAlertsRaw("select alert_severity id, count(*) count", "where is_engaged = 0 and alert_tstamp_end is not null group by alert_severity")
+      elseif selection_name == "type" then
+	 actual_entries = interface.queryAlertsRaw("select alert_type id, count(*) count", "where is_engaged = 0 and alert_tstamp_end is not null group by alert_type")
+      end
    end
 
    local buttons = '<div class="btn-group">'
@@ -1036,7 +1033,7 @@ local function drawDropdown(status, selection_name, active_entry, entries_table)
    buttons = buttons..'<li'..class_active..'><a href="?status='..status..'">All</a></i>'
 
    for _, entry in pairs(actual_entries) do
-      local id = tonumber(entry["id"])
+      local id = entry["id"]
       local count = entry["count"]
       local label = id_to_label(id, true)
 
@@ -1332,7 +1329,7 @@ function drawAlertSourceSettings(alert_source, delete_button_msg, delete_confirm
 
    if(show_entity) then
       -- these fields will be used to perform queries
-      _GET["entity"] = alertEntity(show_entity)
+      _GET["entity"] = show_entity
       _GET["entity_val"] = alert_source
    end
 
@@ -1647,14 +1644,14 @@ function getCurrentStatus() {
       end
 
       if num_past_alerts > 0 then
-	 alert_items[#alert_items +1] = {["label"] = i18n("show_alerts.past_alerts"),
+	 alert_items[#alert_items +1] = {["label"] = i18n("show_alerts.closed_alerts"),
 	    ["div-id"] = "table-alerts-history",  ["status"] = "historical"}
       elseif status == "historical" then
 	 status = nil; status_reset = 1
       end
 
       if num_flow_alerts > 0 then
-	 alert_items[#alert_items +1] = {["label"] = i18n("show_alerts.flow_alerts"),
+	 alert_items[#alert_items +1] = {["label"] = i18n("show_alerts.stored_alerts"),
 	    ["div-id"] = "table-flow-alerts-history",  ["status"] = "historical-flows"}
       elseif status == "historical-flows" then
 	 status = nil; status_reset = 1
@@ -1689,14 +1686,14 @@ function getCurrentStatus() {
 	 if((isEmptyString(_GET["entity"])) and isEmptyString(_GET["epoch_begin"]) and isEmptyString(_GET["epoch_end"])) then
 	    -- alert_level_keys and alert_type_keys are defined in lua_utils
 	    local alert_severities = {}
-	    for _, s in pairs(alert_level_keys) do alert_severities[#alert_severities +1 ] = s[3] end
+	    for _, s in pairs(alert_level_keys) do alert_severities[#alert_severities +1 ] = s end
 	    local alert_types = {}
-	    for _, s in pairs(alert_type_keys) do alert_types[#alert_types +1 ] = s[3] end
+	    for _, s in pairs(alert_type_keys) do alert_types[#alert_types +1 ] = s end
 
 	    local a_type, a_severity = nil, nil
 	    if clicked == "1" then
-	       if tonumber(_GET["alert_type"]) ~= nil then a_type = alertTypeLabel(_GET["alert_type"], true) end
-	       if tonumber(_GET["alert_severity"]) ~= nil then a_severity = alertSeverityLabel(_GET["alert_severity"], true) end
+	       if _GET["alert_type"] ~= nil then a_type = alertTypeLabel(_GET["alert_type"], true) end
+	       if _GET["alert_severity"] ~= nil then a_severity = alertSeverityLabel(_GET["alert_severity"], true) end
 	    end
 
 	    print(drawDropdown(t["status"], "type", a_type, alert_types))
@@ -1893,9 +1890,14 @@ function getTabSpecificParams() {
    if (parseInt(period_end) > 0)
       tab_specific.epoch_end = period_end;
 
-   if (tab_specific.status == "]] print(_GET["status"]) print[[") {
-      tab_specific.alert_severity = ]] if tonumber(_GET["alert_severity"]) ~= nil then print(_GET["alert_severity"]) else print('""') end print[[;
-      tab_specific.alert_type = ]] if tonumber(_GET["alert_type"]) ~= nil then print(_GET["alert_type"]) else print('""') end print[[;
+   if (tab_specific.status == "]] print(_GET["status"]) print[[") {]]
+   if _GET["alert_severity"] ~= nil then
+      print("tab_specific.alert_severity = '".._GET["alert_severity"].."';")
+   end
+   if _GET["alert_type"] ~= nil then
+      print("tab_specific.alert_type = '".._GET["alert_type"].."';")
+   end
+   print[[
    }
 
    // merge the general parameters to the tab specific ones
@@ -1923,9 +1925,9 @@ $('#buttonOpenDeleteModal').on('click', function() {
    var zoomsel = $("#deleteZoomSelector").find(":selected");
 
    $(".modal-body #modalDeleteAlertsMsg").html(zoomsel.data('msg') + ']]
-	 if tonumber(_GET["alert_severity"]) ~= nil then
+	 if _GET["alert_severity"] ~= nil then
 	    print(' with severity "'..alertSeverityLabel(_GET["alert_severity"], true)..'" ')
-	 elseif tonumber(_GET["alert_type"]) ~= nil then
+	 elseif _GET["alert_type"] ~= nil then
 	    print(' with type "'..alertTypeLabel(_GET["alert_type"], true)..'" ')
 	 end
 	 print[[');

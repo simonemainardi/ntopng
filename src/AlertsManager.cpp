@@ -1898,7 +1898,9 @@ int AlertsManager::deleteAlerts(bool engaged, AlertEntity alert_entity,
 /* ******************************************* */
 
 int AlertsManager::queryAlertsRaw(lua_State *vm, const char *selection,
-				  const char *clauses, const char *table_name) {
+				  const char *clauses) {
+  const char *table_name = "alerts";
+
   if(!ntop->getPrefs()->are_alerts_disabled()) {
     alertsRetriever ar;
     char query[STORE_MANAGER_MAX_QUERY];
@@ -1907,8 +1909,8 @@ int AlertsManager::queryAlertsRaw(lua_State *vm, const char *selection,
 
     snprintf(query, sizeof(query),
 	     "%s FROM %s %s ",
-	     selection ? selection : "*",
-	     table_name ? table_name : (char*)"",
+	     selection ? selection : "SELECT *",
+	     table_name,
 	     clauses ? clauses : (char*)"");
 
     // ntop->getTrace()->traceEvent(TRACE_NORMAL, "Going to execute: %s", query);

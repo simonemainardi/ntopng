@@ -317,35 +317,27 @@ end
 -- each table entry is an array as:
 -- {"alert html string", "alert C enum value", "plain string"}
 alert_level_keys = {
-  { "<span class='label label-info'>Info</span>",       0, "info"    },
-  { "<span class='label label-warning'>Warning</span>", 1, "warning" },
-  { "<span class='label label-danger'>Error</span>",    2, "error"   }
+  ["info"] = "<span class='label label-info'>Info</span>",
+  ["warning"] = "<span class='label label-warning'>Warning</span>",
+  ["error"] = "<span class='label label-danger'>Error</span>",
 }
 
 alert_type_keys = {
-  { "<i class='fa fa-tint'></i> TCP SYN Flood",                            0, "tcp_syn_flood"              },
-  { "<i class='fa fa-tint'></i> Flows Flood",                              1, "flows_flood"                },
-  { "<i class='fa fa-arrow-circle-up'></i> Threshold Cross",               2, "threshold_cross"            },
-  { "<i class='fa fa-frown-o'></i> Blacklist Host",                        3, "blacklist_host"             },
-  { "<i class='fa fa-clock-o'></i> Periodic Activity",                     4, "periodic_activity"          },
-  { "<i class='fa fa-sort-asc'></i> Quota Exceeded",                       5, "quota_exceeded"             },
-  { "<i class='fa fa-ban'></i> Malware Detected",                          6, "malware_detected"           },
-  { "<i class='fa fa-bomb'></i> Ongoing Attacker",                         7, "ongoing_attacker"           },
-  { "<i class='fa fa-bomb'></i> Under Attack",                             8, "under_attack"               },
-  { "<i class='fa fa-exclamation'></i> Misconfigured App",                 9, "misconfigured_app"          },
-  { "<i class='fa fa-exclamation'></i> Suspicious Activity",              10, "suspicious_activity"        },
-  { "<i class='fa fa-exclamation'></i> Too Many Alerts",                  11, "too_many_alerts"            },
-  { "<i class='fa fa-exclamation'></i> MySQL open_files_limit too small", 12, "open_files_limit_too_small" },
-  { "<i class='fa fa-exclamation'></i> Interface Alerted",                13, "interface_alerted"          },
-  { "<i class='fa fa-exclamation'></i> Flow Misbehaviour",                14, "flow_misbehaviour"          },
-}
-
-alert_entity_keys = {
-  { "Interface",       0, "interface"     },
-  { "Host",            1, "host"          },
-  { "Network",         2, "network"       },
-  { "SNMP device",     3, "snmp_device"   },
-  { "Flow",            4, "flow"          }
+  ["tcp_syn_flood"] = "<i class='fa fa-tint'></i> TCP SYN Flood",
+  ["flows_flood"] = "<i class='fa fa-tint'></i> Flows Flood",
+  ["threshold_cross"] = "<i class='fa fa-arrow-circle-up'></i> Threshold Cross",
+  ["blacklist_host"] = "<i class='fa fa-frown-o'></i> Blacklist Host",
+  ["periodic_activity"] = "<i class='fa fa-clock-o'></i> Periodic Activity",
+  ["quota_exceeded"] = "<i class='fa fa-sort-asc'></i> Quota Exceeded",
+  ["malware_detected"] = "<i class='fa fa-ban'></i> Malware Detected",
+  ["ongoing_attacker"] = "<i class='fa fa-bomb'></i> Ongoing Attacker",
+  ["under_attack"] = "<i class='fa fa-bomb'></i> Under Attack",
+  ["misconfigured_app"] = "<i class='fa fa-exclamation'></i> Misconfigured App",
+  ["suspicious_activity"] = "<i class='fa fa-exclamation'></i> Suspicious Activity",
+  ["too_many_alerts"] = "<i class='fa fa-exclamation'></i> Too Many Alerts",
+  ["open_files_limit_too_small"] = "<i class='fa fa-exclamation'></i> MySQL open_files_limit too small",
+  ["interface_alerted"] = "<i class='fa fa-exclamation'></i> Interface Alerted",
+  ["flow_misbehaviour"] = "<i class='fa fa-exclamation'></i> Flow Misbehaviour",
 }
 
 alert_functions_description = {
@@ -368,70 +360,24 @@ function noHtml(s)
    return s:gsub("<.->(.-)</.->","%1"):gsub("^%s*(.-)%s*$", "%1")
 end
 
-function alertSeverityLabel(v, nohtml)
-   local res = _handleArray(alert_level_keys, tonumber(v))
-   if res ~= nil and nohtml == true then res = noHtml(res) end
-   return res
-end
-
-function alertSeverity(v)
-   local severity_table = {}
-   for i, t in ipairs(alert_level_keys) do
-      severity_table[#severity_table + 1] = {t[2], t[3]}
+function alertSeverityLabel(k, nohtml)
+   if (nohtml or alert_level_keys[k] == nil) then
+      return firstToUpper(k)
    end
-   return(_handleArray(severity_table, v))
+
+   return alert_level_keys[k]
 end
 
-function alertSeverityRaw(sev_idx)
-   sev_idx = sev_idx + 1
-   if sev_idx <= #alert_level_keys then
-      return alert_level_keys[sev_idx][3]
+function alertTypeLabel(k, nohtml)
+   if (nohtml or alert_type_keys[k] == nil) then
+      return firstToUpper(k)
    end
-   return nil
+
+   return alert_type_keys[k]
 end
 
-function alertTypeLabel(v, nohtml)
-   local res = _handleArray(alert_type_keys, tonumber(v))
-   if res ~= nil and nohtml == true then res = noHtml(res) end
-   return res
-end
-
-function alertType(v)
-   local typetable = {}
-   for i, t in ipairs(alert_type_keys) do
-      typetable[#typetable + 1] = {t[2], t[3]}
-   end
-   return(_handleArray(typetable, v))
-end
-
-function alertTypeRaw(alert_idx)
-   alert_idx = alert_idx + 1
-   if alert_idx <= #alert_type_keys then
-      return alert_type_keys[alert_idx][3]
-   end
-   return nil
-end
-
-function alertEntityLabel(v, nothml)
-   local res = _handleArray(alert_entity_keys, tonumber(v))
-   if res ~= nil and nohtml == true then res = noHtml(res) end
-   return res
-end
-
-function alertEntity(v)
-   local typetable = {}
-   for i, t in ipairs(alert_entity_keys) do
-      typetable[#typetable + 1] = {t[2], t[3]}
-   end
-   return(_handleArray(typetable, v))
-end
-
-function alertEntityRaw(entity_idx)
-   entity_idx = entity_idx + 1
-   if entity_idx <= #alert_entity_keys then
-      return alert_entity_keys[entity_idx][3]
-   end
-   return nil
+function alertEntityLabel(k, nothml)
+   return firstToUpper(k)
 end
 
 function areAlertsEnabled()

@@ -5087,36 +5087,6 @@ static int ntop_interface_make_room_requested(lua_State* vm) {
 static int ntop_interface_query_alerts_raw(lua_State* vm) {
   NetworkInterface *iface = getCurrentInterface(vm);
   AlertsManager *am;
-  bool engaged = false;
-  char *selection = NULL, *clauses = NULL;
-
-  ntop->getTrace()->traceEvent(TRACE_DEBUG, "%s() called", __FUNCTION__);
-
-  if(!iface || !(am = iface->getAlertsManager()))
-    return (CONST_LUA_ERROR);
-
-  if(lua_type(vm, 1) == LUA_TBOOLEAN)
-    engaged = lua_toboolean(vm, 1);
-
-  if(lua_type(vm, 2) == LUA_TSTRING)
-    if((selection = (char*)lua_tostring(vm, 2)) == NULL)
-      return(CONST_LUA_PARAM_ERROR);
-
-  if(lua_type(vm, 3) == LUA_TSTRING)
-    if((clauses = (char*)lua_tostring(vm, 3)) == NULL)
-      return(CONST_LUA_PARAM_ERROR);
-
-  if(am->queryAlertsRaw(vm, engaged, selection, clauses))
-    return(CONST_LUA_ERROR);
-
-  return (CONST_LUA_OK);
-}
-
-/* ****************************************** */
-
-static int ntop_interface_query_flow_alerts_raw(lua_State* vm) {
-  NetworkInterface *iface = getCurrentInterface(vm);
-  AlertsManager *am;
   char *selection = NULL, *clauses = NULL;
 
   ntop->getTrace()->traceEvent(TRACE_DEBUG, "%s() called", __FUNCTION__);
@@ -5132,7 +5102,7 @@ static int ntop_interface_query_flow_alerts_raw(lua_State* vm) {
     if((clauses = (char*)lua_tostring(vm, 2)) == NULL)
       return(CONST_LUA_PARAM_ERROR);
 
-  if(am->queryFlowAlertsRaw(vm, selection, clauses))
+  if(am->queryAlertsRaw(vm, selection, clauses))
     return(CONST_LUA_ERROR);
 
   return (CONST_LUA_OK);
@@ -5637,7 +5607,6 @@ static const luaL_Reg ntop_interface_reg[] = {
 
   { "getCachedNumAlerts",   ntop_interface_get_cached_num_alerts    },
   { "queryAlertsRaw",       ntop_interface_query_alerts_raw         },
-  { "queryFlowAlertsRaw",   ntop_interface_query_flow_alerts_raw    },
   { "engageHostAlert",      ntop_interface_engage_host_alert        },
   { "releaseHostAlert",     ntop_interface_release_host_alert       },
   { "engageNetworkAlert",   ntop_interface_engage_network_alert     },
