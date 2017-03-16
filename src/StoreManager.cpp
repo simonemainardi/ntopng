@@ -21,9 +21,11 @@
 
 #include "ntop_includes.h"
 
-StoreManager::StoreManager(int interface_id) {
-    ifid = interface_id;
-    iface = ntop->getInterfaceById(interface_id);
+StoreManager::StoreManager(NetworkInterface *network_interface) {
+    iface = network_interface;
+    if(iface)
+      ifid = iface->get_id();
+
     db = NULL;
 };
 

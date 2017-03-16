@@ -31,7 +31,7 @@ struct statsManagerRetrieval {
 
 class StatsManager : protected StoreManager {
 public:
-    StatsManager(int interface_id, const char *db_filename);
+    StatsManager(NetworkInterface *network_interface, const char *db_filename);
     ~StatsManager() {};
     int insertMinuteSampling(time_t epoch, const char * const sampling);
     int insertHourSampling(time_t epoch, const char * const sampling);

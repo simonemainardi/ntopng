@@ -180,8 +180,8 @@ NetworkInterface::NetworkInterface(const char *name,
   loadDumpPrefs();
   loadScalingFactorPrefs();
 
-  if(((statsManager  = new StatsManager(id, STATS_MANAGER_STORE_NAME)) == NULL)
-     || ((alertsManager = new AlertsManager(id, ALERTS_MANAGER_STORE_NAME)) == NULL))
+  if(((statsManager  = new StatsManager(this, STATS_MANAGER_STORE_NAME)) == NULL)
+     || ((alertsManager = new AlertsManager(this, ALERTS_MANAGER_STORE_NAME)) == NULL))
     throw "Not enough memory";
 
   if((host_pools = new HostPools(this)) == NULL)
@@ -4119,6 +4119,34 @@ static bool virtual_http_hosts_walker(GenericHashEntry *node, void *data) {
     info->num += s->luaVirtualHosts(info->vm, info->key, h);
 
   return(false); /* false = keep on walking */
+}
+
+/* **************************************** */
+
+bool NetworkInterface::incDecHostEngagedAlertsCounter(const char *key, bool increase) {
+  bool ret = false;
+  char host_buf[64];
+  char *host_ip;
+  u_int16_t vlan_id = 0;
+  Host *h;
+
+  Utils::getHostVlanInfo(key, &host_ip, &vlan_id, host_buf, sizeof(host_buf));
+
+  disablePurge(false); /* Must disable as it is not called from the data path */
+
+  h = getHost(host_ip, vlan_id);
+
+  if(h) {
+    ret = true;
+    if(increase)
+      h->incNumAlerts();
+    else
+      h->decNumAlerts();
+  }
+
+  enablePurge(false);
+
+  return ret;
 }
 
 /* **************************************** */

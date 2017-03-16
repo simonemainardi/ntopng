@@ -2062,3 +2062,28 @@ bool Utils::isInterfaceUp(char *ifname) {
 
   return(!!(ifr.ifr_flags & IFF_UP) ? true : false);
 }
+
+/* ****************************************************** */
+
+void Utils::getHostVlanInfo(const char* key, char** host_ip, u_int16_t* vlan_id, char *buf, u_int buf_len) {
+  char *where, *vlan = NULL;
+
+  if(key == NULL || host_ip == NULL || vlan_id == NULL || buf == NULL) {
+    if(host_ip) *host_ip = NULL;
+    if(vlan_id) *vlan_id = 0;
+    return;
+  }
+
+  snprintf(buf, buf_len, "%s", key);
+
+  if(((*host_ip) = strtok_r(buf, "@", &where)) != NULL)
+    vlan = strtok_r(NULL, "@", &where);
+
+  if(host_ip == NULL)
+    *host_ip = NULL;
+
+  if(vlan)
+    (*vlan_id) = (u_int16_t)atoi(vlan);
+  else
+    (*vlan_id) = 0;
+}

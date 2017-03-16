@@ -22,7 +22,7 @@
 #include "ntop_includes.h"
 
 
-StatsManager::StatsManager(int interface_id, const char *filename) : StoreManager(interface_id) {
+StatsManager::StatsManager(NetworkInterface *network_interface, const char *filename) : StoreManager(network_interface) {
   char filePath[MAX_PATH], fileFullPath[MAX_PATH], fileName[MAX_PATH];
 
   MINUTE_CACHE_NAME = "MINUTE_STATS";

@@ -1822,9 +1822,8 @@ static int ntop_interface_refresh_num_alerts(lua_State* vm) {
 
       if(lua_type(vm, 3) == LUA_TNUMBER) {
 	num_alerts = (u_int32_t)lua_tonumber(vm, 3);
-	h->setNumAlerts(num_alerts);
       } else {
-	h->getNumAlerts(true /* From AlertsManager re-reads the values */);
+	h->getNumAlerts();
       }
     }
 

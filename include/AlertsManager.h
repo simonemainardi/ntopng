@@ -100,8 +100,13 @@ class AlertsManager : protected StoreManager, protected GenericHash {
   bool isValidNetwork(const char *cidr);
   bool isValidInterface(NetworkInterface *n);
 
+  Alert *getEngaged(Alert *a);
+  bool isEngaged(Alert *a);
+  bool setEngaged(Alert *a);
+  bool setReleased(Alert *a);
+
  public:
-  AlertsManager(int interface_id, const char *db_filename);
+  AlertsManager(NetworkInterface *network_interface, const char *db_filename);
   virtual ~AlertsManager();
 
   virtual void *dequeueLoop();
@@ -110,15 +115,12 @@ class AlertsManager : protected StoreManager, protected GenericHash {
   int enqueue(const char *json_alert);
 
   int processDequeuedAlert(const char *json_alert);
+  int processInactive();
   int engageAlert(Alert *a);
   int releaseAlert(Alert *a);
   int storeAlert(Alert *a);
 
-  Alert *getEngaged(Alert *a);
-  bool isEngaged(Alert *a);
-  bool setEngaged(Alert *a);
-  bool setReleased(Alert *a);
-
+  void incDecEngagedAlertsCounters(Alert *a, bool increase);
 #ifdef NOTUSED
   int storeAlert(AlertType alert_type, AlertLevel alert_severity, const char *alert_json);
   int storeAlert(lua_State *L, int index);

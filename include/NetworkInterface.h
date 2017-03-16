@@ -377,6 +377,7 @@ class NetworkInterface {
   inline void setIdleState(bool new_state)         { is_idle = new_state;           }
   inline StatsManager  *getStatsManager()          { return statsManager;           }
   inline AlertsManager *getAlertsManager()         { return alertsManager;          }
+
   void listHTTPHosts(lua_State *vm, char *key);
 #ifdef NTOPNG_PRO
   void refreshL7Rules();
@@ -464,6 +465,7 @@ class NetworkInterface {
   inline void incAlertLevel()               { alertLevel++;                        }
   inline void decAlertLevel()               { if(--alertLevel < 0) alertLevel = 0; }
   inline int8_t getAlertLevel()             { return(alertLevel);                  }
+  bool incDecHostEngagedAlertsCounter(const char *key, bool increase);
 #ifdef NTOPNG_PRO
   virtual void addIPToLRUMatches(u_int32_t client_ip, u_int16_t user_pool_id,
 				 char *label, int32_t lifetime_sec) { ; };

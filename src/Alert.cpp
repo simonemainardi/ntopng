@@ -66,60 +66,58 @@ bool Alert::parse_header(json_object *obj) {
     return false;
   }
 
+  if((!source_type && !target_type) || (!source_value && !target_value))
+    return false;
+
+  /* Prevents same source and target */
+  if(source_type && target_type && !strcmp(source_type, target_type)
+     && source_value && target_value && !strcmp(source_value, target_value))
+    return false;
+
   return (((source_type && source_value) || (target_type && target_value)));
 }
 
 /* *************************************** */
 
 Alert::Alert(const Alert &alert) : GenericHashEntry(NULL) {
+  source_type = source_value = NULL;
+  target_type = target_value = NULL;
+  alert_type = alert_severity = NULL;
+  status = alert_id = NULL;
+  json = NULL;
+
   if(alert.source_type)
     source_type = strdup(alert.source_type);
-  else
-    source_type = NULL;
 
   if(alert.source_value)
     source_value = strdup(alert.source_value);
-  else
-    source_value = NULL;
 
   if(alert.target_type)
     target_type = strdup(alert.target_type);
-  else
-    target_type = NULL;
 
   if(alert.target_value)
     target_value = strdup(alert.target_value);
-  else
-    target_value = NULL;
 
   if(alert.alert_type)
     alert_type = strdup(alert.alert_type);
-  else
-    alert_type = NULL;
 
   if(alert.alert_severity)
     alert_severity = strdup(alert.alert_severity);
-  else
-    alert_severity = NULL;
 
   if(alert.status)
     status = strdup(alert.status);
-  else
-    status = NULL;
 
   if(alert.alert_id)
     alert_id = strdup(alert.alert_id);
-  else
-    alert_id = NULL;
 
   if(alert.json)
     json = strdup(alert.json);
-  else
-    json = NULL;
 
   timestamp = alert.timestamp;
   valid_json = alert.valid_json;
   hash_key = alert.hash_key;
+  source_counter_increased = alert.source_counter_increased,
+    target_counter_increased = alert.target_counter_increased;  
 }
 
 /* *************************************** */
@@ -140,6 +138,8 @@ Alert::~Alert() {
 Alert::Alert(const char *alert_json) : GenericHashEntry(NULL) {
   json_object *o;
   enum json_tokener_error jerr = json_tokener_success;
+
+  source_counter_increased = target_counter_increased = false;
 
   source_type = source_value = target_type = target_value = NULL;
   alert_type = alert_severity = NULL;

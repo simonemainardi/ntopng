@@ -49,8 +49,10 @@ void* AlertsManager::dequeueLoop() {
       if(json_alert) free(json_alert);
     }
 
-    if(found == 0)
+    if(found == 0) {
+      processInactive();
       sleep(1);
+    }
 
   }
 
@@ -61,6 +63,12 @@ void* AlertsManager::dequeueLoop() {
 
 int AlertsManager::processDequeuedAlert(const char *json_alert) {
   Alert alert(json_alert);
+
+  if(!alert.isValid()) {
+    ntop->getTrace()->traceEvent(TRACE_DEBUG, "Alert is not valid JSON, skipping [%s]", json_alert ? json_alert : "");
+    return -1;
+  }
+
   const char *status;
 
   ntop->getTrace()->traceEvent(TRACE_DEBUG, "Alert JSON [%s]", json_alert ? json_alert : NULL);
@@ -91,12 +99,39 @@ int AlertsManager::processDequeuedAlert(const char *json_alert) {
 
 /* **************************************************** */
 
+static bool inactive_walker(GenericHashEntry *alert, void *user_data) {
+  AlertsManager *am = (AlertsManager*)user_data;
+  Alert *a = (Alert*)alert;
+
+  if(!am)
+    return(true);
+
+  if(!a)
+    return(false);
+
+  /* Try to increase as alert source/dest may have become active */
+  am->incDecEngagedAlertsCounters(a, true /* counters++ */);
+
+  return(false); /* false = keep on walking */
+}
+
+/* **************************************************** */
+
+int AlertsManager::processInactive() {
+
+  walk(inactive_walker, (void*)this);
+
+  return 0;
+}
+
+/* **************************************************** */
+
 int AlertsManager::engageAlert(Alert *alert) {
   int rc;
   sqlite3_stmt *stmt = NULL;
   char query[STORE_MANAGER_MAX_QUERY];
 
-  if(!store_initialized || !store_opened)
+  if(!store_initialized || !store_opened || !hasEmptyRoom() /* The engaged alerts cache is full */ )
     return -1;
 
   if(isEngaged(alert)) {
@@ -143,11 +178,13 @@ int AlertsManager::engageAlert(Alert *alert) {
     }
 
     rc = 0;
-    setEngaged(alert); /* Only if the insert has been successful */
+
   out:
     if(stmt) sqlite3_finalize(stmt);
     m.unlock(__FILE__, __LINE__);
 
+    if(rc == 0)
+      setEngaged(alert); /* Only if the insert has been successful */
   }
   return rc;
 }
@@ -212,11 +249,13 @@ int AlertsManager::releaseAlert(Alert *alert) {
     }
 
     rc = 0;
-    setReleased(alert); /* Here only if db write has been successfull */
+
   out:
     if(stmt) sqlite3_finalize(stmt);
     m.unlock(__FILE__, __LINE__);
 
+    if(rc == 0)
+      setReleased(alert); /* Here only if db write has been successful */
   }
   return rc;
 }
@@ -278,6 +317,44 @@ int AlertsManager::storeAlert(Alert *alert) {
 
 /* **************************************************** */
 
+void AlertsManager::incDecEngagedAlertsCounters(Alert *alert, bool increase) {
+  const char *source_type = NULL, *source_value = NULL,
+    *target_type = NULL, *target_value = NULL;
+
+  if(!alert)
+    return;
+
+  /* Hosts require engaged alert counters to be in sync */
+
+  if(!increase /* Implies release thus there's no need to check */
+     || !alert->isSourceCounterIncreased()) {
+    source_type = alert->getHeaderField("source_type");
+    source_value = alert->getHeaderField("source_value");
+
+    if(source_type && source_value
+       && !strncmp(source_type, "host", strlen("host")))
+      if(StoreManager::iface
+	 && StoreManager::iface->incDecHostEngagedAlertsCounter(source_value, increase)
+	 && increase)
+	alert->sourceCounterIncreased(); /* Alert source is currently in ntopng hosts cache */
+  }
+
+  if(!increase
+     || !alert->isTargetCounterIncreased()) {
+    target_type = alert->getHeaderField("target_type");
+    target_value = alert->getHeaderField("target_value");
+
+    if(target_type && target_value
+       && !strncmp(target_type, "host", strlen("host")))
+      if(StoreManager::iface
+	 && StoreManager::iface->incDecHostEngagedAlertsCounter(target_value, increase)
+	 && increase)
+	alert->targetCounterIncreased(); /* Alert target is currently in ntopng hosts cache */
+  }
+}
+
+/* **************************************************** */
+
 Alert* AlertsManager::getEngaged(Alert *alert) {
   u_int32_t hash;
 
@@ -320,10 +397,13 @@ bool AlertsManager::setEngaged(Alert *alert) {
     return true;
 
   Alert *a = new Alert(*alert);
+
   if(!add(a))
     return false;
-  else
+  else {
+    incDecEngagedAlertsCounters(a, true /* counters++ */);
     return true;
+  }
 }
 
 /* **************************************************** */
@@ -337,6 +417,7 @@ bool AlertsManager::setReleased(Alert *alert) {
   if(!remove(a))
     return false;
   else {
+    incDecEngagedAlertsCounters(a, false /* counters-- */);
     delete a;
     return true;
   }
@@ -367,7 +448,7 @@ AlertsManager::~AlertsManager() {
 
 /* **************************************************** */
 
-AlertsManager::AlertsManager(int interface_id, const char *filename) : StoreManager(interface_id), GenericHash(NULL, 1024, 4096) {
+AlertsManager::AlertsManager(NetworkInterface *network_interface, const char *filename) : StoreManager(network_interface), GenericHash(network_interface, 1024, 4096) {
   char filePath[MAX_PATH], fileFullPath[MAX_PATH], fileName[MAX_PATH];
 
   snprintf(filePath, sizeof(filePath), "%s/%d/alerts/",

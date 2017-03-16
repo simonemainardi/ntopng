@@ -670,7 +670,10 @@ char* Host::get_name(char *buf, u_int buf_len, bool force_resolution_if_not_foun
 /* ***************************************** */
 
 bool Host::idle() {
-  if((num_uses > 0) || (!iface->is_purge_idle_interface()))
+  if((num_uses > 0)
+     || (!iface->is_purge_idle_interface())
+     || getNumAlerts() > 0 /* Do not purge hosts that have currently engaged alerts */
+     )
     return(false);
 
   switch(ntop->getPrefs()->get_host_stickiness()) {
@@ -840,7 +843,6 @@ json_object* Host::getJSONObject() {
     json_object_object_add(my_object, "userActivities", user_activities->getJSONObject());
 
   /* Generic Host */
-  json_object_object_add(my_object, "num_alerts", json_object_new_int(triggerAlerts() ? getNumAlerts() : 0));
   json_object_object_add(my_object, "sent", sent.getJSONObject());
   json_object_object_add(my_object, "rcvd", rcvd.getJSONObject());
   json_object_object_add(my_object, "ndpiStats", ndpiStats->getJSONObject(iface));
@@ -1254,21 +1256,6 @@ void Host::updateStats(struct timeval *tv) {
 	     h, iface->get_name(), h, host_quota_mb);
     iface->getAlertsManager()->storeHostAlert(this, alert_quota, alert_level_warning, msg);
   }
-}
-
-/* *************************************** */
-
-u_int32_t Host::getNumAlerts(bool from_alertsmanager) {
-  if(!from_alertsmanager)
-    return(num_alerts_detected);
-
-  num_alerts_detected = iface->getAlertsManager()->getNumHostAlerts(this, true);
-
-  ntop->getTrace()->traceEvent(TRACE_DEBUG,
-			       "Refreshing alerts from alertsmanager [num: %i]",
-			       num_alerts_detected);
-
-  return(num_alerts_detected);
 }
 
 /* *************************************** */

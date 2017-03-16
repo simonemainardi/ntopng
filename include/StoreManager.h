@@ -36,7 +36,7 @@ class StoreManager {
 		 int (*callback)(void *, int, char **, char **),
 		 void *payload);
  public:
-  StoreManager(int interface_id);
+  StoreManager(NetworkInterface *network_interface);
   ~StoreManager();
 
   NetworkInterface* getNetworkInterface();
