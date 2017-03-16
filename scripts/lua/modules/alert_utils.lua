@@ -37,7 +37,7 @@ function Alert:addFlow(f)
    end
 end
 
-function Alert:typeThresholdCross(time_granularity, metric, threshold, operator, actual_value)
+function Alert:typeThresholdCross(time_granularity, metric, actual_value, operator, threshold)
    self.header.alert_type = 'threshold_cross'
    self.header.alert_severity = 'warning'
    self.header.alert_id = time_granularity..'_'..metric
@@ -396,6 +396,9 @@ function check_host_alert(ifname, hostname, mode, key, old_json, new_json)
 	 local rc = f()
 	 local alert_id = mode.."_"..t[1] -- the alert identifies is the concat. of time granularity and condition, e.g., min_bytes
 
+	 local ha = HostAlert(key)
+	 ha.typeThresholdCross(mode --[[ eg., min --]], t[1] --[[ e.g., bytes--]], val --[[ acutal value ]], op, t[3] --[[ threshold --]])
+
 	 if(rc) then
 	    alert_status = 1 -- alert on
 	    local alert_msg = "Threshold <b>"..t[1].."</b> crossed by host <A HREF='"..ntop.getHttpPrefix().."/lua/host_details.lua?host="..key.."'>"..key:gsub("@0","").."</A> [".. val .." ".. op .. " " .. t[3].."]"
@@ -669,8 +672,7 @@ end
 
 function check_host_threshold(ifname, host_ip, mode)
    interface.select(ifname)
-   local ifstats = interface.getStats()
-   ifname_id = ifstats.id
+   ifname_id = getInterfaceId(ifname)
    local host_ip_fsname = host_ip
 
    if are_alerts_suppressed(host_ip, ifname) then return end
@@ -687,6 +689,8 @@ function check_host_threshold(ifname, host_ip, mode)
    end
 
    json = interface.getHostInfo(host_ip)
+
+   tprint(json["json"])
 
    if(json ~= nil) then
       fname = fixPath(basedir.."/".. host_ip_fsname ..".json")

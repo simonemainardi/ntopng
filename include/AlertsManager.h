@@ -104,6 +104,7 @@ class AlertsManager : protected StoreManager, protected GenericHash {
   bool isEngaged(Alert *a);
   bool setEngaged(Alert *a);
   bool setReleased(Alert *a);
+  int initEngaged();
 
  public:
   AlertsManager(NetworkInterface *network_interface, const char *db_filename);
@@ -124,6 +125,8 @@ class AlertsManager : protected StoreManager, protected GenericHash {
   u_int32_t getNumEngagedAlerts(Host *h);
 
   void incDecEngagedAlertsCounters(Alert *a, bool increase);
+
+
 #ifdef NOTUSED
   int storeAlert(AlertType alert_type, AlertLevel alert_severity, const char *alert_json);
   int storeAlert(lua_State *L, int index);

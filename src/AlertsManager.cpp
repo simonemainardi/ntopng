@@ -469,17 +469,26 @@ bool AlertsManager::setEngaged(Alert *alert) {
 
 bool AlertsManager::setReleased(Alert *alert) {
   Alert *a = getEngaged(alert);
+  bool ret;
 
   if(!a) /* wasn't engaged */
     return true;
 
+  /* Release can be triggered when the interface is 
+     walking the hash so we must Lock */
+  disablePurge();
+
   if(!remove(a))
-    return false;
+    ret = false;
   else {
     incDecEngagedAlertsCounters(a, false /* counters-- */);
     delete a;
-    return true;
+    ret = true;
   }
+
+  enablePurge();
+
+  return ret;
 }
 
 /* **************************************************** */
@@ -489,6 +498,7 @@ void AlertsManager::startDequeueLoop() {
 }
 
 /* **************************************************** */
+
 int AlertsManager::enqueue(const char *json_alert) {
   bool ret = false;
   if(!ntop->getPrefs()->are_alerts_disabled()) {
@@ -503,6 +513,54 @@ int AlertsManager::enqueue(const char *json_alert) {
 
 AlertsManager::~AlertsManager() {
   if(alertsQueue) delete alertsQueue;
+}
+
+/* **************************************************** */
+
+static int init_engaged_alerts_callback(void *data, int argc, char **argv, char **azColName) {
+  AlertsManager *am = (AlertsManager*)data;
+  int json_index = 0; /* Make sure it's the first column in the select statement! */
+
+  if(am) {
+    Alert alert(argv[json_index]);
+    am->engageAlert(&alert);
+  }
+
+  return 0;
+}
+
+/* **************************************************** */
+
+int AlertsManager::initEngaged() {
+  if(!ntop->getPrefs()->are_alerts_disabled()) {
+    char query[STORE_MANAGER_MAX_QUERY];
+    char *zErrMsg = 0;
+    int rc = 0;
+
+    if(!store_initialized || !store_opened)
+      return -1;
+
+    snprintf(query, sizeof(query),
+	     "SELECT alert_json FROM %s "
+	     "where is_engaged = 1 ; ",
+	     ALERTS_MANAGER_TABLE);
+
+    /* Do not lock here, make sure the method is called in the constructor */
+    rc = sqlite3_exec(db, query, init_engaged_alerts_callback, (void*)this, &zErrMsg);
+
+    if(rc != SQLITE_OK){
+      rc = 1;
+      ntop->getTrace()->traceEvent(TRACE_ERROR, "SQL Error: %s\n%s", zErrMsg, query);
+      sqlite3_free(zErrMsg);
+      goto out;
+    }
+
+    rc = 0;
+  out:
+
+    return rc;
+  } else
+    return(-1);  
 }
 
 /* **************************************************** */
@@ -552,7 +610,7 @@ AlertsManager::AlertsManager(NetworkInterface *network_interface, const char *fi
   if((alertsQueue = new SPSCQueue()) == NULL)
     throw "Not enough memory";
 
-  refreshCachedNumAlerts();
+  initEngaged();
 }
 
 /* **************************************************** */
