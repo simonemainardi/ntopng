@@ -116,8 +116,8 @@ local  en = {
    },
 
    alerts_dashboard = {
-      flow_alert_origins  = "Alert Origins",
-      flow_alert_targets  = "Alert Targets",
+      alert_origins  = "Alert Origins",
+      alert_targets  = "Alert Targets",
       engaged_for_longest = "Engaged for Longest",
       starting_on = "starting on",
       total_alerts = "Total Alerts",

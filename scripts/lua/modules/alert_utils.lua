@@ -70,6 +70,24 @@ default_re_arm_minutes = 1
 
 -- ##############################################################################
 
+-- Formats an entity, returning a pretty name and url
+function formatEntity(entity_type, entity_value)
+   local entity = ""
+   local url = ntop.getHttpPrefix().."/lua/"
+
+   if entity_type == "host" then
+      -- Possibly remove vlan 0
+      local hostkey = hostinfo2hostkey(hostkey2hostinfo(entity_value))
+      local hostname = ntop.getResolvedAddress(hostkey)
+      entity = hostname
+      url = url.."host_details.lua?host="..hostkey
+   end
+
+   return entity, url
+end
+
+-- ##############################################################################
+
 function bytes(old, new, interval)
    -- io.write(debug.traceback().."\n")
    if(verbose) then print("bytes("..interval..")") end
@@ -734,26 +752,41 @@ end
 -- #################################
 
 -- Filter a query result, returning only matches with host direction type
-function alertsQueryFilterHostsLocal(res, flowhosts_type)
-   --[[TODO
-   if flowhosts_type == "local_only" then
-      aggregation = aggregation.." and cli_localhost = 1 and srv_localhost = 1 "
-   elseif flowhosts_type == "remote_only" then
-      aggregation = aggregation.." and cli_localhost = 0 and srv_localhost = 0 "
-   elseif flowhosts_type == "local_origin_remote_target" then
-      aggregation =  aggregation.." and cli_localhost = 1 and srv_localhost = 0 "
-   elseif flowhosts_type == "remote_origin_local_target" then
-      aggregation =  aggregation.." and cli_localhost = 0 and srv_localhost = 1 "
-   end]]
-   return r
+function alertsQueryFilterHostsLocal(r, flowhosts_type)
+   local res = {}
+
+   for _, v in pairs(r) do
+      --[[if v.alert_json.header ~= nil then
+         if ((flowhosts_type == "local_only") and ())
+         if flowhosts_type == "local_only" then
+            aggregation = aggregation.." and cli_localhost = 1 and srv_localhost = 1 "
+         elseif flowhosts_type == "remote_only" then
+            aggregation = aggregation.." and cli_localhost = 0 and srv_localhost = 0 "
+         elseif flowhosts_type == "local_origin_remote_target" then
+            aggregation =  aggregation.." and cli_localhost = 1 and srv_localhost = 0 "
+         elseif flowhosts_type == "remote_origin_local_target" then
+            aggregation =  aggregation.." and cli_localhost = 0 and srv_localhost = 1 "
+         end
+
+         if res.alert_json.source_detail.localHost == true then
+            
+         end
+      end]]
+   end
+
+   return res
+end
+
+-- Performs query result pagination
+function alertsQueryPaginate(res, page, limit)
+   return res
 end
 
 -- #################################
 
 -- what:
 --    - engaged: engaged alerts only
---    - historical: released alerts only
---    - historical-flows: historical alerts only
+--    - historical: past alerts only
 --    - *: any alert
 
 function performAlertsQuery(statement, what, opts)
@@ -767,10 +800,6 @@ function performAlertsQuery(statement, what, opts)
       wargs[#wargs+1] = 'AND is_engaged = 1'
    elseif what == "historical" then
       wargs[#wargs+1] = 'AND is_engaged = 0'
-      wargs[#wargs+1] = 'AND alert_tstamp_end is not null'
-   elseif what == "historical-flows" then
-      wargs[#wargs+1] = 'AND is_engaged = 0'
-      wargs[#wargs+1] = 'AND alert_tstamp_end is null'
    end
 
    -- entity parameter semantic is 'any between source_entity and destination_entity'
@@ -996,15 +1025,8 @@ local function drawDropdown(status, selection_name, active_entry, entries_table)
 
    -- compute counters to avoid printing items that have zero entries in the database
    local actual_entries = {}
-   if status == "historical-flows" then
 
-      if selection_name == "severity" then
-	 actual_entries = interface.queryAlertsRaw("select alert_severity id, count(*) count", "where is_engaged = 0 and alert_tstamp_end is null group by alert_severity")
-      elseif selection_name == "type" then
-	 actual_entries = interface.queryAlertsRaw("select alert_type id, count(*) count", "where is_engaged = 0 and alert_tstamp_end is null group by alert_type")
-      end
-
-   elseif status == "engaged" then
+   if status == "engaged" then
 
       if selection_name == "severity" then
 	 actual_entries = interface.queryAlertsRaw("select alert_severity id, count(*) count", "where is_engaged = 1 group by alert_severity")
@@ -1014,9 +1036,9 @@ local function drawDropdown(status, selection_name, active_entry, entries_table)
 
    else -- status == "historical"
       if selection_name == "severity" then
-	 actual_entries = interface.queryAlertsRaw("select alert_severity id, count(*) count", "where is_engaged = 0 and alert_tstamp_end is not null group by alert_severity")
+	 actual_entries = interface.queryAlertsRaw("select alert_severity id, count(*) count", "where is_engaged = 0 group by alert_severity")
       elseif selection_name == "type" then
-	 actual_entries = interface.queryAlertsRaw("select alert_type id, count(*) count", "where is_engaged = 0 and alert_tstamp_end is not null group by alert_type")
+	 actual_entries = interface.queryAlertsRaw("select alert_type id, count(*) count", "where is_engaged = 0 group by alert_type")
       end
    end
 
@@ -1312,7 +1334,7 @@ function drawAlertSettings(alert_source, alert_val)
 end
 
 function drawAlertSourceSettings(alert_source, delete_button_msg, delete_confirm_msg, page_name, page_params, alt_name, show_entity)
-   local num_engaged_alerts, num_past_alerts, num_flow_alerts = 0,0,0
+   local num_engaged_alerts, num_past_alerts = 0,0
    local tab = _GET["tab"]
 
    local descr = alert_functions_description
@@ -1344,9 +1366,8 @@ function drawAlertSourceSettings(alert_source, delete_button_msg, delete_confirm
       -- possibly add a tab if there are alerts configured for the host
       num_engaged_alerts = getNumAlerts("engaged", getTabParameters(_GET, "engaged"))
       num_past_alerts = getNumAlerts("historical", getTabParameters(_GET, "historical"))
-      num_flow_alerts = getNumAlerts("historical-flows", getTabParameters(_GET, "historical-flows"))
 
-      if num_past_alerts > 0 or num_engaged_alerts > 0 or num_flow_alerts > 0 then
+      if num_past_alerts > 0 or num_engaged_alerts > 0 then
          if(tab == nil) then
             -- if no tab is selected and there are alerts, we show them by default
             tab = "alert_list"
@@ -1373,7 +1394,7 @@ function drawAlertSourceSettings(alert_source, delete_button_msg, delete_confirm
    print('</ul>')
 
    if((show_entity) and (tab == "alert_list")) then
-      drawAlertTables(num_past_alerts, num_engaged_alerts, num_flow_alerts, _GET, true)
+      drawAlertTables(num_past_alerts, num_engaged_alerts, _GET, true)
    elseif(tab == "alert_settings") then
       drawAlertSettings(getAlertSource(show_entity, alert_source, alt_name), alert_source)
    else
@@ -1531,7 +1552,7 @@ end
 
 -- #################################
 
-function drawAlertTables(num_past_alerts, num_engaged_alerts, num_flow_alerts, get_params, hide_extended_title, alt_nav_tabs)
+function drawAlertTables(num_past_alerts, num_engaged_alerts, get_params, hide_extended_title, alt_nav_tabs)
    local alert_items = {}
    local url_params = {}
    for k,v in pairs(get_params) do if k ~= "csrf" then url_params[k] = v end end
@@ -1609,8 +1630,6 @@ function updateDeleteLabel(tabid) {
       val = "Engaged ";
    else if (tabid == "tab-table-alerts-history")
       val = "Past ";
-   else if (tabid == "tab-table-flow-alerts-history")
-      val = "Past Flow ";
 
    label.html(prefix + val);
 }
@@ -1626,8 +1645,6 @@ function getCurrentStatus() {
       val = "engaged";
    else if (tabid == "tab-table-alerts-history")
       val = "historical";
-   else if (tabid == "tab-table-flow-alerts-history")
-      val = "historical-flows";
    else
       val = "";
 
@@ -1651,13 +1668,6 @@ function getCurrentStatus() {
 	 alert_items[#alert_items +1] = {["label"] = i18n("show_alerts.closed_alerts"),
 	    ["div-id"] = "table-alerts-history",  ["status"] = "historical"}
       elseif status == "historical" then
-	 status = nil; status_reset = 1
-      end
-
-      if num_flow_alerts > 0 then
-	 alert_items[#alert_items +1] = {["label"] = i18n("show_alerts.stored_alerts"),
-	    ["div-id"] = "table-flow-alerts-history",  ["status"] = "historical-flows"}
-      elseif status == "historical-flows" then
 	 status = nil; status_reset = 1
       end
 
@@ -1740,10 +1750,7 @@ function getCurrentStatus() {
 	       textAlign: 'center'
 	    }
 	 },
-]]
 
-	 if t["status"] ~= "historical-flows" then
-	    print[[
 	 {
 	    title: "]]print(i18n("show_alerts.alert_duration"))print[[",
 	    field: "column_duration",
@@ -1752,10 +1759,7 @@ function getCurrentStatus() {
 	       textAlign: 'center'
 	    }
 	 },
-	 ]]
-	 end
 
-	 print[[
 	 {
 	    title: "]]print(i18n("show_alerts.alert_severity"))print[[",
 	    field: "column_severity",
@@ -1821,7 +1825,7 @@ function getCurrentStatus() {
 	 { "1 year",  60*60*24*366 , i18n("show_alerts.older_1_year_ago") }
       }
 
-      if (num_past_alerts > 0 or num_flow_alerts > 0 or num_engaged_alerts > 0) then
+      if (num_past_alerts > 0 or num_engaged_alerts > 0) then
 	 -- trigger the click on the right tab to force table load
 	 print[[
 <script type="text/javascript">
