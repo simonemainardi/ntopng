@@ -86,6 +86,8 @@ local  en = {
 
    show_alerts = {
       alerts = "Alerts",
+      source = "Source",
+      target = "Target",
       engaged_alerts = "Engaged Alerts",
       closed_alerts = "Closed Alerts",
       stored_alerts = "Stored Alerts",

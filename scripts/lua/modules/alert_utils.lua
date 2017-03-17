@@ -71,7 +71,7 @@ default_re_arm_minutes = 1
 -- ##############################################################################
 
 -- Formats an entity, returning a pretty name and url
-function formatEntity(entity_type, entity_value)
+function formatEntity(entity_type, entity_value, join_html)
    local entity = ""
    local url = ntop.getHttpPrefix().."/lua/"
 
@@ -83,7 +83,11 @@ function formatEntity(entity_type, entity_value)
       url = url.."host_details.lua?host="..hostkey
    end
 
-   return entity, url
+   if join_html then
+      return '<a href="'..url..'">'..entity..'</a>'
+   else
+      return entity, url
+   end
 end
 
 -- ##############################################################################
@@ -1734,11 +1738,32 @@ function getCurrentStatus() {
 	 print [[
 	        title: "]] print(title) print[[",
       columns: [
+]] if t["status"] ~= "engaged" then
+   print[[
 	 {
 	    title: "]]print(i18n("show_alerts.alert_actions"))print[[",
 	    field: "column_key",
 	    css: {
 	       textAlign: 'center', width: '100px'
+	    }
+	 },]]
+end
+print[[
+   {
+	    title: "]]print(i18n("show_alerts.source"))print[[",
+	    field: "column_source",
+            sortable: true,
+	    css: {
+	       textAlign: 'center', width: '20%'
+	    }
+	 },
+
+	 {
+	    title: "]]print(i18n("show_alerts.target"))print[[",
+	    field: "column_target",
+            sortable: true,
+	    css: {
+	       textAlign: 'center', width: '20%'
 	    }
 	 },
 
@@ -1782,7 +1807,7 @@ function getCurrentStatus() {
 	    title: "]]print(i18n("show_alerts.alert_description"))print[[",
 	    field: "column_msg",
 	    css: {
-	       textAlign: 'left'
+	       textAlign: 'left', width: '25%'
 	    }
 	 }
       ]
