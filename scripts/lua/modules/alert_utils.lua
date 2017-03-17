@@ -19,20 +19,43 @@ default_re_arm_minutes = 1
 
 -- ##############################################################################
 
+function formatEntityType(entity_type)
+   return entity_type or ""
+end
+
+-- ##############################################################################
+
 -- Formats an entity, returning a pretty name and url
 function formatEntity(entity_type, entity_value, join_html)
-   local entity = ""
+   local entity = entity_value or ""
    local url = ntop.getHttpPrefix().."/lua/"
 
    if entity_type == "host" then
       -- Possibly remove vlan 0
       local hostkey = hostinfo2hostkey(hostkey2hostinfo(entity_value))
-      local hostname = ntop.getResolvedAddress(hostkey)
-      entity = hostname
+      
+      entity = ntop.getResolvedAddress(hostkey)
+
       url = url.."host_details.lua?host="..hostkey
+   elseif entity_type == "network" then
+      local network_id = getNetworkIdByName(entity_value)
+      
+      if network_id ~= nil then
+         url = url.."hosts_stats.lua?network="..network_id
+      else
+         url = ""
+      end
+   elseif entity_type == "interface" then
+      local if_id = getInterfaceId(entity_value)
+
+      if if_id ~= nil then
+         url = url.."if_stats.lua?ifid="..if_id
+      else
+         url = ""
+      end
    end
 
-   if join_html then
+   if join_html and url ~= "" then
       return '<a href="'..url..'">'..entity..'</a>'
    else
       return entity, url
@@ -52,13 +75,21 @@ function formatAlertMessage(alert_json)
 
    if alert.header ~= nil then
       local alert_type = alert.header.alert_type
+      local alert_detail = alert.alert_detail or {}
+      local source_msg = formatEntityType(alert.header.source_type) .. " " .. formatEntity(alert.header.source_type, alert.header.source_value, true)
+      local target_msg = formatEntityType(alert.header.target_type) .. " " .. formatEntity(alert.header.target_type, alert.header.target_value, true)
 
       if alert_type == "threshold_cross" then
-         return "Threshold Crossed by " .. formatEntity(alert.header.source_type, alert.header.source_value, true)
+         local msg = "Threshold Crossed by " .. source_msg
+         if alert_detail.threshold ~= nil then
+            msg = msg.." ("..table.concat({alert_detail.metric, alert_detail.actual_value, alert_detail.operator, alert_detail.threshold}, " ")..")"
+         end
+
+         return msg
       end
    end
 
-   return alert_json
+   return nil
 end
 
 -- ##############################################################################
@@ -251,6 +282,7 @@ end
 
 function alertBySource(alert_source)
    local alert
+
    -- check if we are processing a pair ip-vlan such as 192.168.1.0@0
    if string.match(alert_source, "@") then
       alert = HostAlert(alert_source)
@@ -260,7 +292,7 @@ function alertBySource(alert_source)
       alert = NetworkAlert(alert_source)
       -- finally assume it's an interface alert
    else
-      alert = NetworkAlert(ifid)
+      alert = InterfaceAlert(getInterfaceName(ifId))
    end
 
    return alert
@@ -471,7 +503,7 @@ function check_network_alert(ifname, network_name, mode, key, old_table, new_tab
 	 local f = loadstring(what)
 	 local rc = f()
 
-    local alert = NetworkAlert(key, network_name)
+    local alert = NetworkAlert(network_name)
 	 alert:typeThresholdCross(mode --[[ eg., min --]], t[1] --[[ e.g., bytes--]], val --[[ acutal value ]], op, t[3] --[[ threshold --]])
     
 	 if(rc) then
@@ -544,7 +576,7 @@ function check_interface_alert(ifname, mode, old_table, new_table)
 	 local f = loadstring(what)
 	 local rc = f()
 
-    local alert = InterfaceAlert(getInterfaceId(ifname))
+    local alert = InterfaceAlert(ifname)
 	 alert:typeThresholdCross(mode --[[ eg., min --]], t[1] --[[ e.g., bytes--]], val --[[ acutal value ]], op, t[3] --[[ threshold --]])
 
 	 if(rc) then
@@ -1721,7 +1753,7 @@ print[[
 	    field: "column_source",
             sortable: true,
 	    css: {
-	       textAlign: 'center', width: '20%'
+	       textAlign: 'center', width: '12%'
 	    }
 	 },
 
@@ -1730,7 +1762,7 @@ print[[
 	    field: "column_target",
             sortable: true,
 	    css: {
-	       textAlign: 'center', width: '20%'
+	       textAlign: 'center', width: '12%'
 	    }
 	 },
 
@@ -1774,7 +1806,7 @@ print[[
 	    title: "]]print(i18n("show_alerts.alert_description"))print[[",
 	    field: "column_msg",
 	    css: {
-	       textAlign: 'left', width: '25%'
+	       textAlign: 'left', width: '30%'
 	    }
 	 }
       ]

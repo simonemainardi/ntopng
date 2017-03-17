@@ -62,8 +62,8 @@ end
 
 --------------------------------------------------------------------------------
 
-InterfaceAlert = class(Alert, function(c, ifid)
-			  Alert.init(c, 'interface', ifid, nil, nil, alert_type)
+InterfaceAlert = class(Alert, function(c, ifname)
+			  Alert.init(c, 'interface', ifname, nil, nil, alert_type)
 end)
 
 --------------------------------------------------------------------------------
@@ -86,8 +86,8 @@ end)
 
 --------------------------------------------------------------------------------
 
-NetworkAlert = class(Alert, function(c, network_id, network_name)
-			  Alert.init(c, 'network', network_id, nil, nil, alert_type)
+NetworkAlert = class(Alert, function(c, network_name)
+			  Alert.init(c, 'network', network_name, nil, nil, alert_type)
 			  -- TODO network_name is optional, retrieve it if not provided
 end)
 

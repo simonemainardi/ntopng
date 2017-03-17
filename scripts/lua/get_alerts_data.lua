@@ -96,11 +96,12 @@ for _key,_value in ipairs(alerts) do
 
    row["column_severity"] = alertSeverityLabel(_value["alert_severity"])
    row["column_type"]     = alertTypeLabel(_value["alert_type"])
-   local alert_json = _value["alert_json"] or ""
+   local alert_message = _value["alert_json"] or "{}"
 
-   if ((string.len(alert_json) > 0) and (string.sub(alert_json, 1, 1)) == "{") then
+   if ((string.len(alert_message) > 0) and (string.sub(alert_message, 1, 1)) == "{") then
       -- this is JSON
-      row["column_msg"] = formatAlertMessage(alert_json) .. " [<a href='"..ntop.getHttpPrefix().."/lua/get_alerts_data.lua?row_id=".._value["rowid"].."'>json</a>]"
+      local alert_json = json.decode(alert_message, 1)
+      row["column_msg"] = (formatAlertMessage(alert_json) or alert_message).. " [<a href='"..ntop.getHttpPrefix().."/lua/get_alerts_data.lua?row_id=".._value["rowid"].."'>json</a>]"
    else
       row["column_msg"] = string.gsub(alert_json, '"', "'")
    end

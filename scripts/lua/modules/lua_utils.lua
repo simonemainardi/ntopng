@@ -1027,6 +1027,16 @@ function getInterfaceId(interface_name)
   return(-1)
 end
 
+function getNetworkIdByName(network)
+   for k,v in pairs(interface.getNetworksStats()) do
+      if k == network then
+         return v.network_id
+      end
+   end
+
+   return nil
+end
+
 -- Windows fixes for interfaces with "uncommon chars"
 function purifyInterfaceName(interface_name)
   -- io.write(debug.traceback().."\n")
