@@ -4845,168 +4845,6 @@ static int ntop_interface_store_alert(lua_State* vm) {
 
 /* ****************************************** */
 
-static int ntop_interface_engage_release_host_alert(lua_State* vm, bool engage) {
-  NetworkInterface *ntop_interface = getCurrentInterface(vm);
-  char *host_ip;
-  u_int16_t vlan_id = 0;
-  char buf[64];
-  Host *h;
-  int alert_severity;
-  int alert_type;
-  char *alert_json, *engaged_alert_id;
-  AlertsManager *am;
-  int ret;
-
-  ntop->getTrace()->traceEvent(TRACE_DEBUG, "%s() called", __FUNCTION__);
-
-  if(ntop_lua_check(vm, __FUNCTION__, 1, LUA_TSTRING)) return(CONST_LUA_ERROR);
-  get_host_vlan_info((char*)lua_tostring(vm, 1), &host_ip, &vlan_id, buf, sizeof(buf));
-
-  if(ntop_lua_check(vm, __FUNCTION__, 2, LUA_TSTRING)) return(CONST_LUA_ERROR);
-  engaged_alert_id = (char*)lua_tostring(vm, 2);
-
-  if(ntop_lua_check(vm, __FUNCTION__, 3, LUA_TNUMBER)) return(CONST_LUA_ERROR);
-  alert_type = (int)lua_tonumber(vm, 3);
-
-  if(ntop_lua_check(vm, __FUNCTION__, 4, LUA_TNUMBER)) return(CONST_LUA_ERROR);
-  alert_severity = (int)lua_tonumber(vm, 4);
-
-  if(ntop_lua_check(vm, __FUNCTION__, 5, LUA_TSTRING)) return(CONST_LUA_ERROR);
-  alert_json = (char*)lua_tostring(vm, 5);
-
-  if((!ntop_interface)
-     || ((h = ntop_interface->findHostsByIP(get_allowed_nets(vm), host_ip, vlan_id)) == NULL)
-     || ((am = ntop_interface->getAlertsManager()) == NULL))
-    return(CONST_LUA_ERROR);
-
-  if(engage)
-    ret = am->engageHostAlert(h, engaged_alert_id,
-			      (AlertType)alert_type, (AlertLevel)alert_severity, alert_json);
-  else
-    ret = am->releaseHostAlert(h, engaged_alert_id,
-			       (AlertType)alert_type, (AlertLevel)alert_severity, alert_json);
-
-  return ret >= 0 ? CONST_LUA_OK : CONST_LUA_ERROR;
-}
-
-/* ****************************************** */
-
-static int ntop_interface_engage_release_network_alert(lua_State* vm, bool engage) {
-  NetworkInterface *ntop_interface = getCurrentInterface(vm);
-  char *cidr;
-  int alert_severity;
-  int alert_type;
-  char *alert_json, *engaged_alert_id;
-  AlertsManager *am;
-  int ret;
-
-  ntop->getTrace()->traceEvent(TRACE_DEBUG, "%s() called", __FUNCTION__);
-
-  if(ntop_lua_check(vm, __FUNCTION__, 1, LUA_TSTRING)) return(CONST_LUA_ERROR);
-  cidr = (char*)lua_tostring(vm, 1);
-
-  if(ntop_lua_check(vm, __FUNCTION__, 2, LUA_TSTRING)) return(CONST_LUA_ERROR);
-  engaged_alert_id = (char*)lua_tostring(vm, 2);
-
-  if(ntop_lua_check(vm, __FUNCTION__, 3, LUA_TNUMBER)) return(CONST_LUA_ERROR);
-  alert_type = (int)lua_tonumber(vm, 3);
-
-  if(ntop_lua_check(vm, __FUNCTION__, 4, LUA_TNUMBER)) return(CONST_LUA_ERROR);
-  alert_severity = (int)lua_tonumber(vm, 4);
-
-  if(ntop_lua_check(vm, __FUNCTION__, 5, LUA_TSTRING)) return(CONST_LUA_ERROR);
-  alert_json = (char*)lua_tostring(vm, 5);
-
-  if((!ntop_interface)
-     || ((am = ntop_interface->getAlertsManager()) == NULL))
-    return(CONST_LUA_ERROR);
-
-  if(engage)
-    ret = am->engageNetworkAlert(cidr, engaged_alert_id,
-				 (AlertType)alert_type, (AlertLevel)alert_severity, alert_json);
-  else
-    ret = am->releaseNetworkAlert(cidr, engaged_alert_id,
-				  (AlertType)alert_type, (AlertLevel)alert_severity, alert_json);
-
-  return ret >= 0 ? CONST_LUA_OK : CONST_LUA_ERROR;
-}
-
-/* ****************************************** */
-
-static int ntop_interface_engage_release_interface_alert(lua_State* vm, bool engage) {
-  NetworkInterface *ntop_interface = getCurrentInterface(vm);
-  int alert_severity;
-  int alert_type;
-  char *alert_json, *engaged_alert_id;
-  AlertsManager *am;
-  int ret;
-
-  ntop->getTrace()->traceEvent(TRACE_DEBUG, "%s() called", __FUNCTION__);
-
-  if(ntop_lua_check(vm, __FUNCTION__, 1, LUA_TSTRING)) return(CONST_LUA_ERROR);
-  engaged_alert_id = (char*)lua_tostring(vm, 1);
-
-  if(ntop_lua_check(vm, __FUNCTION__, 2, LUA_TNUMBER)) return(CONST_LUA_ERROR);
-  alert_type = (int)lua_tonumber(vm, 2);
-
-  if(ntop_lua_check(vm, __FUNCTION__, 3, LUA_TNUMBER)) return(CONST_LUA_ERROR);
-  alert_severity = (int)lua_tonumber(vm, 3);
-
-  if(ntop_lua_check(vm, __FUNCTION__, 4, LUA_TSTRING)) return(CONST_LUA_ERROR);
-  alert_json = (char*)lua_tostring(vm, 4);
-
-  if((!ntop_interface)
-     || ((am = ntop_interface->getAlertsManager()) == NULL))
-    return(CONST_LUA_ERROR);
-
-  if(engage)
-    ret = am->engageInterfaceAlert(ntop_interface, engaged_alert_id,
-				   (AlertType)alert_type, (AlertLevel)alert_severity, alert_json);
-  else
-    ret = am->releaseInterfaceAlert(ntop_interface, engaged_alert_id,
-				    (AlertType)alert_type, (AlertLevel)alert_severity, alert_json);
-
-  return ret >= 0 ? CONST_LUA_OK : CONST_LUA_ERROR;
-}
-
-/* ****************************************** */
-
-static int ntop_interface_engage_host_alert(lua_State* vm) {
-  return ntop_interface_engage_release_host_alert(vm, true /* engage */);
-}
-
-/* ****************************************** */
-
-static int ntop_interface_release_host_alert(lua_State* vm) {
-  return ntop_interface_engage_release_host_alert(vm, false /* release */);
-}
-
-/* ****************************************** */
-
-static int ntop_interface_engage_network_alert(lua_State* vm) {
-  return ntop_interface_engage_release_network_alert(vm, true /* engage */);
-}
-
-/* ****************************************** */
-
-static int ntop_interface_release_network_alert(lua_State* vm) {
-  return ntop_interface_engage_release_network_alert(vm, false /* release */);
-}
-
-/* ****************************************** */
-
-static int ntop_interface_engage_interface_alert(lua_State* vm) {
-  return ntop_interface_engage_release_interface_alert(vm, true /* engage */);
-}
-
-/* ****************************************** */
-
-static int ntop_interface_release_interface_alert(lua_State* vm) {
-  return ntop_interface_engage_release_interface_alert(vm, false /* release */);
-}
-
-/* ****************************************** */
-
 static int ntop_interface_get_cached_num_alerts(lua_State* vm) {
   NetworkInterface *iface = getCurrentInterface(vm);
   AlertsManager *am;
@@ -5610,12 +5448,6 @@ static const luaL_Reg ntop_interface_reg[] = {
 
   { "getCachedNumAlerts",   ntop_interface_get_cached_num_alerts    },
   { "queryAlertsRaw",       ntop_interface_query_alerts_raw         },
-  { "engageHostAlert",      ntop_interface_engage_host_alert        },
-  { "releaseHostAlert",     ntop_interface_release_host_alert       },
-  { "engageNetworkAlert",   ntop_interface_engage_network_alert     },
-  { "releaseNetworkAlert",  ntop_interface_release_network_alert    },
-  { "engageInterfaceAlert", ntop_interface_engage_interface_alert   },
-  { "releaseInterfaceAlert",ntop_interface_release_interface_alert  },
   { "enableHostAlerts",     ntop_interface_host_enable_alerts       },
   { "disableHostAlerts",    ntop_interface_host_disable_alerts      },
   { "refreshNumAlerts",     ntop_interface_refresh_num_alerts       },
@@ -5784,8 +5616,31 @@ static const luaL_Reg ntop_reg[] = {
 
 /* ****************************************** */
 
-void Lua::lua_register_classes(lua_State *L, bool http_mode) {
+void Lua::luaRegister(lua_State *L, const ntop_class_reg *reg) {
   static const luaL_Reg _meta[] = { { NULL, NULL } };
+  int lib_id, meta_id;
+
+  /* newclass = {} */
+  lua_createtable(L, 0, 0);
+  lib_id = lua_gettop(L);
+
+  /* metatable = {} */
+  luaL_newmetatable(L, reg->class_name);
+  meta_id = lua_gettop(L);
+  luaL_register(L, NULL, _meta);
+
+  /* metatable.__index = class_methods */
+  lua_newtable(L), luaL_register(L, NULL, reg->class_methods);
+  lua_setfield(L, meta_id, "__index");
+
+  /* class.__metatable = metatable */
+  lua_setmetatable(L, lib_id);
+
+  /* _G["Foo"] = newclass */
+  lua_setglobal(L, reg->class_name);
+}
+
+void Lua::luaRegisterInternalRegs(lua_State *L) {
   int i;
 
   ntop_class_reg ntop_lua_reg[] = {
@@ -5794,32 +5649,16 @@ void Lua::lua_register_classes(lua_State *L, bool http_mode) {
     {NULL,         NULL}
   };
 
+  for(i=0; ntop_lua_reg[i].class_name != NULL; i++)
+    Lua::luaRegister(L, &ntop_lua_reg[i]);
+}
+
+void Lua::lua_register_classes(lua_State *L, bool http_mode) {
   if(!L) return;
 
   luaopen_lsqlite3(L);
 
-  for(i=0; ntop_lua_reg[i].class_name != NULL; i++) {
-    int lib_id, meta_id;
-
-    /* newclass = {} */
-    lua_createtable(L, 0, 0);
-    lib_id = lua_gettop(L);
-
-    /* metatable = {} */
-    luaL_newmetatable(L, ntop_lua_reg[i].class_name);
-    meta_id = lua_gettop(L);
-    luaL_register(L, NULL, _meta);
-
-    /* metatable.__index = class_methods */
-    lua_newtable(L), luaL_register(L, NULL, ntop_lua_reg[i].class_methods);
-    lua_setfield(L, meta_id, "__index");
-
-    /* class.__metatable = metatable */
-    lua_setmetatable(L, lib_id);
-
-    /* _G["Foo"] = newclass */
-    lua_setglobal(L, ntop_lua_reg[i].class_name);
-  }
+  Lua::luaRegisterInternalRegs(L);
 
   if(http_mode) {
     /* Overload the standard Lua print() with ntop_lua_http_print that dumps data on HTTP server */
