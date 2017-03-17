@@ -11,6 +11,17 @@ local json = require "dkjson"
 
 sendHTTPHeader('text/html; charset=iso-8859-1')
 
+if tonumber(_GET["row_id"]) ~= nil then
+   local res = interface.queryAlertsRaw("select alert_json", "where rowid=".._GET["row_id"])
+
+   if (res ~= nil) and (res[1] ~= nil) then
+      res = res[1].alert_json
+   end
+
+   print(res)
+   return
+end
+
 status          = _GET["status"]
 
 engaged = false
@@ -85,7 +96,14 @@ for _key,_value in ipairs(alerts) do
 
    row["column_severity"] = alertSeverityLabel(_value["alert_severity"])
    row["column_type"]     = alertTypeLabel(_value["alert_type"])
-   row["column_msg"]      = string.gsub(_value["alert_json"] or "", '"', "'")
+   local alert_json = _value["alert_json"] or ""
+
+   if ((string.len(alert_json) > 0) and (string.sub(alert_json, 1, 1)) == "{") then
+      -- this is JSON
+      row["column_msg"] = formatAlertMessage(alert_json) .. " [<a href='"..ntop.getHttpPrefix().."/lua/get_alerts_data.lua?row_id=".._value["rowid"].."'>json</a>]"
+   else
+      row["column_msg"] = string.gsub(alert_json, '"', "'")
+   end
 
    column_id = ""
 
