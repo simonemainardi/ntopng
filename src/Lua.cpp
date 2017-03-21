@@ -1825,48 +1825,6 @@ static int ntop_interface_host_disable_alerts(lua_State* vm) {
 
 /* ****************************************** */
 
-static int ntop_interface_refresh_num_alerts(lua_State* vm) {
-  NetworkInterface *ntop_interface = getCurrentInterface(vm);
-  AlertsManager *am;
-  Host *h;
-  char *host_ip;
-  u_int16_t vlan_id = 0;
-  u_int32_t num_alerts;
-  char buf[128];
-
-  ntop->getTrace()->traceEvent(TRACE_DEBUG, "%s() called", __FUNCTION__);
-
-  if((!ntop_interface))
-    return(CONST_LUA_ERROR);
-
-  if(lua_type(vm, 1) == LUA_TSTRING) {
-    get_host_vlan_info((char*)lua_tostring(vm, 1), &host_ip, &vlan_id, buf, sizeof(buf));
-
-    /* Optional VLAN id */
-    if(lua_type(vm, 2) == LUA_TNUMBER) vlan_id = (u_int16_t)lua_tonumber(vm, 2);
-
-    if((h = ntop_interface->getHost(host_ip, vlan_id))) {
-
-      if(lua_type(vm, 3) == LUA_TNUMBER) {
-	num_alerts = (u_int32_t)lua_tonumber(vm, 3);
-      } else {
-	h->getNumAlerts();
-      }
-    }
-
-  } else {
-
-    if((am = ntop_interface->getAlertsManager()) == NULL)
-      return(CONST_LUA_ERROR);
-
-    am->refreshCachedNumAlerts();
-  }
-
-  return(CONST_LUA_OK);
-}
-
-/* ****************************************** */
-
 static int ntop_correlate_host_activity(lua_State* vm) {
   NetworkInterface *ntop_interface = getCurrentInterface(vm);
   char *host_ip;
@@ -4868,7 +4826,7 @@ static int ntop_interface_store_alert(lua_State* vm) {
 
 /* ****************************************** */
 
-static int ntop_interface_get_cached_num_alerts(lua_State* vm) {
+static int ntop_interface_get_num_engaged_alerts(lua_State* vm) {
   NetworkInterface *iface = getCurrentInterface(vm);
   AlertsManager *am;
 
@@ -4877,7 +4835,9 @@ static int ntop_interface_get_cached_num_alerts(lua_State* vm) {
   if(!iface || !(am = iface->getAlertsManager()))
     return (CONST_LUA_ERROR);
 
-  return (!am->getCachedNumAlerts(vm)) ? CONST_LUA_OK : CONST_LUA_ERROR;
+  lua_pushinteger(vm, am->getNumEngagedAlerts());
+
+  return CONST_LUA_OK;
 }
 
 /* ****************************************** */
@@ -5470,11 +5430,10 @@ static const luaL_Reg ntop_interface_reg[] = {
   /* New generation alerts */
   { "alert",                ntop_interface_alert                    },
 
-  { "getCachedNumAlerts",   ntop_interface_get_cached_num_alerts    },
+  { "getNumEngagedAlerts",  ntop_interface_get_num_engaged_alerts   },
   { "queryAlertsRaw",       ntop_interface_query_alerts_raw         },
   { "enableHostAlerts",     ntop_interface_host_enable_alerts       },
   { "disableHostAlerts",    ntop_interface_host_disable_alerts      },
-  { "refreshNumAlerts",     ntop_interface_refresh_num_alerts       },
   { "makeRoomAlerts",       ntop_interface_make_room_alerts         },
   { "makeRoomRequested",    ntop_interface_make_room_requested      },
   { NULL,                             NULL }

@@ -42,30 +42,6 @@ typedef enum {
 } LocationPolicy;
 
 typedef enum {
-  alert_none = -1,
-  alert_syn_flood = 0,
-  alert_flow_flood,
-  alert_threshold_exceeded,
-  alert_dangerous_host,
-  alert_periodic_activity,
-  alert_quota,
-  alert_malware_detection,
-  alert_host_under_attack,
-  alert_host_attacker,
-  alert_app_misconfiguration,
-  alert_suspicious_activity,
-  alert_too_many_alerts,
-  alert_db_misconfiguration,
-  alert_interface_alerted,
-  alert_flow_misbehaviour
-} AlertType; /*
-	       NOTE:
-	       keep it in sync with alert_type_keys
-	       in ntopng/scripts/lua/modules/lua_utils.lua
-	       and AlertsManager::getAlertType
-	     */
-
-typedef enum {
   notify_all_alerts = 0,
   notify_errors_and_warnings,
   notify_errors_only,  

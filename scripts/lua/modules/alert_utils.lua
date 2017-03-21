@@ -46,7 +46,7 @@ function processAnomalousFlows()
                 (status == "low_goodput") or
                 (status == "tcp_connection_issues")) then
                -- Don't log them for the time being otherwise we'll have too many flows
-            elseif ((status == "tcp_syn_probing") or
+            elseif ((status == "syn_probing") or
                 (status == "tcp_probing") or
                 (status == "tcp_connection_refused")) then
                if probing_alerts_enabled then
@@ -369,11 +369,6 @@ function delete_alert_configuration(alert_source, ifname)
       end
       ntop.delHashCache(get_re_arm_alerts_hash_name(), get_re_arm_alerts_hash_key(ifid, alert_source))
    end
-
-   if is_host == true then
-      interface.refreshNumAlerts(alert_source)
-   end
-   interface.refreshNumAlerts()
 end
 
 function refresh_alert_configuration(alert_source, ifname, timespan, alerts_string)
@@ -418,11 +413,6 @@ function refresh_alert_configuration(alert_source, ifname, timespan, alerts_stri
 	 end
       end
    end
-
-   if is_host == true then
-      interface.refreshNumAlerts(alert_source)
-   end
-   interface.refreshNumAlerts()
 end
 
 function check_host_alert(ifname, hostname, mode, key, old_json, new_json)
@@ -966,17 +956,8 @@ function refreshHostsEngagedAlertsCounters(host_vlan)
 	 entity_val = host -- no vlan in the key if vlan is zero
       end
 
-      interface.refreshNumAlerts(host, vlan, tonumber(k["cnt"]))
-
       if hosts[entity_val] ~= nil then
 	 hosts[entity_val]["updated"] = true
-      end
-   end
-
-   -- finally update the hosts that no longer have engaged alerts
-   for k, v in pairs(hosts) do
-      if v["updated"] == false then
-	 interface.refreshNumAlerts(k, nil, 0);
       end
    end
 end

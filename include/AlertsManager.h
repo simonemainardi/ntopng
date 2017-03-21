@@ -37,7 +37,6 @@ class AlertsManager : protected StoreManager, protected GenericHash {
   bool store_opened, store_initialized;
   bool hash_initialized;
   u_int32_t num_alerts_engaged;
-  bool alerts_stored;
   bool make_room;
   int openStore();
   
@@ -45,55 +44,19 @@ class AlertsManager : protected StoreManager, protected GenericHash {
   bool isAlertEngaged(AlertEntity alert_entity, const char *alert_entity_value, const char *engaged_alert_id);
   void markForMakeRoom(AlertEntity alert_entity, const char *alert_entity_value, const char *table_name);
   int deleteOldestAlert(AlertEntity alert_entity, const char *alert_entity_value, const char *table_name, u_int32_t max_num_rows);
-  int engageAlert(AlertEntity alert_entity, const char *alert_entity_value,
-		  const char *engaged_alert_id,
-		  AlertType alert_type, AlertLevel alert_severity, const char *alert_json,
-		  const char *alert_origin, const char *alert_target);
-  int releaseAlert(AlertEntity alert_entity, const char *alert_entity_value,
-		   const char *engaged_alert_id);
-  int storeAlert(AlertEntity alert_entity, const char *alert_entity_value,
-		 AlertType alert_type, AlertLevel alert_severity, const char *alert_json,
-		 const char *alert_origin, const char *alert_target,
-		 bool check_maximum);
 
-  const char* getAlertEntity(AlertEntity alert_entity);
-  const char* getAlertLevel(AlertLevel alert_severity);
-  const char* getAlertType(AlertType alert_type);
   SlackNotificationChoice getSlackNotificationChoice(char* choice);
   
-  void notifySlack (AlertEntity alert_entity, const char *alert_entity_value,
+  /*void notifySlack (AlertEntity alert_entity, const char *alert_entity_value,
 		    const char *engaged_alert_id,
-		    AlertType alert_type, AlertLevel alert_severity,
+		    AlertLevel alert_severity,
 		    const char *alert_json,
 		    const char *alert_origin, const char *alert_target);
   void notifyAlert(AlertEntity alert_entity, const char *alert_entity_value,
 		   const char *engaged_alert_id,
 		   AlertType alert_type, AlertLevel alert_severity, const char *alert_json,
-		   const char *alert_origin, const char *alert_target);
-  
-  int engageReleaseHostAlert(Host *h,
-			     const char *engaged_alert_id,
-			     AlertType alert_type, AlertLevel alert_severity, const char *alert_json,
-			     Host *alert_origin, Host *alert_target,
-			     bool engage);
-
-  int engageReleaseNetworkAlert(const char *cidr,
-				const char *engaged_alert_id,
-				AlertType alert_type, AlertLevel alert_severity, const char *alert_json,
-				bool engage);
-  int engageReleaseInterfaceAlert(NetworkInterface *n,
-				  const char *engaged_alert_id,
-				  AlertType alert_type, AlertLevel alert_severity, const char *alert_json,
-				  bool engage);
-
-  int getAlerts(lua_State* vm, AddressTree *allowed_hosts,
-		u_int32_t start_offset, u_int32_t end_offset,
-		bool engaged, const char *sql_where_clause);
-  int getFlowAlerts(lua_State* vm, AddressTree *allowed_hosts,
-		    u_int32_t start_offset, u_int32_t end_offset,
-		    const char *sql_where_clause);
-  int getNumAlerts(bool engaged, const char *sql_where_clause);
-  int getNumFlowAlerts(const char *sql_where_clause);
+		   const char *alert_origin, const char *alert_target);*/
+  int getNumAlerts(const char *sql_where_clause);
 
   /* private methods to check the goodness of submitted inputs and possible return the input database string */
   bool isValidHost(Host *h, char *host_string, size_t host_string_len);
@@ -130,123 +93,13 @@ class AlertsManager : protected StoreManager, protected GenericHash {
   void incDecEngagedAlertsCounters(Alert *a, bool increase);
   void updateStatusInformation(Alert *a, bool status_alerted);
 
-
-#ifdef NOTUSED
-  int storeAlert(AlertType alert_type, AlertLevel alert_severity, const char *alert_json);
-  int storeAlert(lua_State *L, int index);
-#endif
-
   inline bool makeRoomRequested() { return(make_room); };
   void makeRoom(AlertEntity alert_entity, const char *alert_entity_value, const char *table_name);
 
   /*
-    ========== HOST alerts API =========
-   */
-  inline int engageHostAlert(Host *h,
-			     const char *engaged_alert_id,
-			     AlertType alert_type, AlertLevel alert_severity, const char *alert_json) {
-    return engageReleaseHostAlert(h, engaged_alert_id, alert_type, alert_severity, alert_json, NULL, NULL, true /* engage */);
-  };
-  inline int engageHostAlert(Host *h,
-			     const char *engaged_alert_id,
-			     AlertType alert_type, AlertLevel alert_severity, const char *alert_json,
-			     Host *alert_origin, Host *alert_target) {
-    return engageReleaseHostAlert(h, engaged_alert_id, alert_type, alert_severity, alert_json, alert_origin, alert_target, true /* engage */);
-  };
-  inline int releaseHostAlert(Host *h,
-			      const char *engaged_alert_id,
-			      AlertType alert_type, AlertLevel alert_severity, const char *alert_json) {
-    return engageReleaseHostAlert(h, engaged_alert_id, alert_type, alert_severity, alert_json, NULL, NULL, false /* release */);
-  };
-  int storeHostAlert(Host *h, AlertType alert_type, AlertLevel alert_severity, const char *alert_json,
-		     Host *alert_origin, Host *alert_target);
-  inline int storeHostAlert(Host *h, AlertType alert_type, AlertLevel alert_severity, const char *alert_json) {
-    return storeHostAlert(h, alert_type, alert_severity, alert_json, NULL, NULL);
-  }
-
-  int getHostAlerts(Host *h,
-		    lua_State* vm, AddressTree *allowed_hosts,
-		    u_int32_t start_offset, u_int32_t end_offset,
-		    bool engaged);
-  
-  int getHostAlerts(const char *host_ip, u_int16_t vlan_id,
-		    lua_State* vm, AddressTree *allowed_hosts,
-		    u_int32_t start_offset, u_int32_t end_offset,
-		    bool engaged);
-
-  int getNumHostAlerts(const char *host_ip, u_int16_t vlan_id, bool engaged);
-  int getNumHostAlerts(Host *h, bool engaged);
-  int getNumHostFlowAlerts(const char *host_ip, u_int16_t vlan_id);
-  int getNumHostFlowAlerts(Host *h);
-
-  /*
-    ========== FLOW alerts API =========
-   */
-  int storeFlowAlert(Flow *f, AlertType alert_type, AlertLevel alert_severity, const char *alert_json);
-  inline int getFlowAlerts(lua_State* vm, AddressTree *allowed_hosts,
-			   u_int32_t start_offset, u_int32_t end_offset) {
-    return getFlowAlerts(vm, allowed_hosts, start_offset, end_offset, NULL);
-  };
-  inline int getNumFlowAlerts() {
-    return getNumFlowAlerts(NULL);
-  };
-  /*
-    ========== NETWORK alerts API ======
-   */
-  inline int engageNetworkAlert(const char *cidr,
-			     const char *engaged_alert_id,
-			     AlertType alert_type, AlertLevel alert_severity, const char *alert_json) {
-    return engageReleaseNetworkAlert(cidr, engaged_alert_id, alert_type, alert_severity, alert_json, true /* engage */);
-  };
-  inline int releaseNetworkAlert(const char *cidr,
-			      const char *engaged_alert_id,
-			      AlertType alert_type, AlertLevel alert_severity, const char *alert_json) {
-    return engageReleaseNetworkAlert(cidr, engaged_alert_id, alert_type, alert_severity, alert_json, false /* release */);
-  };
-  int storeNetworkAlert(const char *cidr, AlertType alert_type, AlertLevel alert_severity, const char *alert_json);
-
-  /*
-    ========== INTERFACE alerts API ======
-   */
-  inline int engageInterfaceAlert(NetworkInterface *n,
-				  const char *engaged_alert_id,
-				  AlertType alert_type, AlertLevel alert_severity, const char *alert_json) {
-    return engageReleaseInterfaceAlert(n, engaged_alert_id, alert_type, alert_severity, alert_json, true /* engage */);
-  };
-  inline int releaseInterfaceAlert(NetworkInterface *n,
-				   const char *engaged_alert_id,
-				   AlertType alert_type, AlertLevel alert_severity, const char *alert_json) {
-    return engageReleaseInterfaceAlert(n, engaged_alert_id, alert_type, alert_severity, alert_json, false /* release */);
-  };
-  int storeInterfaceAlert(NetworkInterface *n, AlertType alert_type, AlertLevel alert_severity, const char *alert_json);
-
-  
-  inline int getAlerts(lua_State* vm, AddressTree *allowed_hosts,
-		       u_int32_t start_offset, u_int32_t end_offset,
-		       bool engaged){
-    return getAlerts(vm, allowed_hosts, start_offset, end_offset, engaged, NULL /* all alerts by default */);
-  }
-
-  /*
-    ========== counters API ======
-  */
-  int getCachedNumAlerts(lua_State *vm);
-  inline void refreshCachedNumAlerts() {
-    num_alerts_engaged = getNumAlerts(true,  static_cast<char*>(NULL));
-    alerts_stored = (getNumAlerts(false,  static_cast<char*>(NULL)) + getNumFlowAlerts()) > 0;
-  }
-  inline int getNumAlerts(bool engaged) {
-    /* must force the cast or the compiler will go crazy with ambiguous calls */
-    return getNumAlerts(engaged, "alert_severity=2" /* errors only */);
-  }
-  int getNumAlerts(bool engaged, u_int64_t start_time);
-  int getNumAlerts(bool engaged, AlertEntity alert_entity, const char *alert_entity_value);
-  int getNumAlerts(bool engaged, AlertEntity alert_entity, const char *alert_entity_value, AlertType alert_type);
-
-  /*
     ========== delete API ======
    */
-  int deleteAlerts(bool engaged, AlertEntity alert_entity, const char *alert_entity_value, AlertType alert_type, time_t older_than);
+  //~ int deleteAlerts(bool engaged, AlertEntity alert_entity, const char *alert_entity_value, AlertType alert_type, time_t older_than);
 
   /* Method used to retrieve alerts and counters with possible sql clause to filter */
   int queryAlertsRaw(lua_State *vm, const char *selection, const char *clauses);

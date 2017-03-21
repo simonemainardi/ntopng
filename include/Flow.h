@@ -209,7 +209,6 @@ class Flow : public GenericHashEntry {
 #ifdef NTOPNG_PRO
   void updateDirectionShapers(bool src2dst_direction, u_int8_t *a_shaper_id, u_int8_t *b_shaper_id);
 #endif
-  void dumpFlowAlert();
   bool skipProtocolFamilyCategorization(u_int16_t proto_id);
   
  public:

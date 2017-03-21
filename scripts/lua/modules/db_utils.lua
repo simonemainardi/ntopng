@@ -752,7 +752,6 @@ function checkOpenFiles()
    local num_interfaces = 0
    for _, i in pairs(interfaces) do num_interfaces = num_interfaces + 1 end
 
-   local alert_severity = "warning"
    local alert_type = "open_files_limit_too_small"
    local alert_id = "open_files_limit_too_small"
    local alert_msg = i18n("alert_messages.open_files_limit_too_small")
@@ -791,22 +790,18 @@ function checkOpenFiles()
    end
 
    ::set_alert_status::
-   for ifid, ifname in pairs(interfaces) do
-      interface.select(ifname)
-      local alert_cache = interface.getCachedNumAlerts()
-      local engaged_alerts = alert_cache["num_alerts_engaged"]
+   --~ for ifid, ifname in pairs(interfaces) do
+      --~ interface.select(ifname)
+      --~ local engaged_alerts = interface.getNumEngagedAlerts()
+      -- TODO rework this logic
 
-      if open_files_too_small == true then
-	 interface.engageInterfaceAlert(alert_id, alert_type, alert_severity, alert_msg)
-	 engaged_alerts = engaged_alerts + 1
-      else
-	 if engaged_alerts > 0 then
-	    interface.releaseInterfaceAlert(alert_id, alert_type, alert_severity, alert_msg)
-	 end
-      end
-
-      if engaged_alerts > 0 then
-	 interface.refreshNumAlerts() -- light refresh just for the footer
-      end
-   end
+      --~ if open_files_too_small == true then
+	 --~ interface.engageInterfaceAlert(alert_id, alert_type, alert_severity, alert_msg)
+	 --~ engaged_alerts = engaged_alerts + 1
+      --~ else
+	 --~ if engaged_alerts > 0 then
+	    --~ interface.releaseInterfaceAlert(alert_id, alert_type, alert_severity, alert_msg)
+	 --~ end
+      --~ end
+   --~ end
 end

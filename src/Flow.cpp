@@ -253,51 +253,6 @@ Flow::~Flow() {
 
 /* *************************************** */
 
-void Flow::dumpFlowAlert() {
-  FlowStatus status = getFlowStatus();
-
-  if((!isFlowAlerted()) && (status != status_normal)) {
-    char buf[128], *f = print(buf, sizeof(buf));
-    AlertType aType;
-    const char *msg = Flow::flowStatus2Str(status);
-    bool do_dump = true;
-
-    ntop->getTrace()->traceEvent(TRACE_INFO, "[%s] %s", msg, f);
-
-    switch(status) {
-
-    if(do_dump && cli_host && srv_host) {
-      char c_buf[256], s_buf[256], *c, *s, fbuf[256], alert_msg[1024];
-
-      c = cli_host->get_ip()->print(c_buf, sizeof(c_buf));
-      if(c && cli_host->get_vlan_id())
-	sprintf(&c[strlen(c)], "@%i", cli_host->get_vlan_id());
-
-      s = srv_host->get_ip()->print(s_buf, sizeof(s_buf));
-      if(s && srv_host->get_vlan_id())
-	sprintf(&s[strlen(s)], "@%i", srv_host->get_vlan_id());
-
-      snprintf(alert_msg, sizeof(alert_msg),
-	       "%s: <A HREF='%s/lua/host_details.lua?host=%s&ifname=%s&page=alerts'>%s</A> &gt; "
-	       "<A HREF='%s/lua/host_details.lua?host=%s&ifname=%s&page=alerts'>%s</A> [%s]",
-	       msg, /* TODO: remove string and save numeric status */
-	       ntop->getPrefs()->get_http_prefix(),
-	       c, iface->get_name(),
-	       cli_host->get_name() ? cli_host->get_name() : c,
-	       ntop->getPrefs()->get_http_prefix(),
-	       s, iface->get_name(),
-	       srv_host->get_name() ? srv_host->get_name() : s,
-	       print(fbuf, sizeof(fbuf)));
-
-      iface->getAlertsManager()->storeFlowAlert(this, aType, alert_level_warning, alert_msg);
-    }
-
-    setFlowAlerted();
-  }
-}
-
-/* *************************************** */
-
 void Flow::checkBlacklistedFlow() {
   if(!blacklist_alarm_emitted) {
     if(cli_host
@@ -331,8 +286,9 @@ void Flow::checkBlacklistedFlow() {
       if(!strstr(c, "@")) sprintf(&c[strlen(c)], "@%i", cli_host->get_vlan_id());
       if(!strstr(s, "@")) sprintf(&s[strlen(s)], "@%i", srv_host->get_vlan_id());
 
-      iface->getAlertsManager()->storeFlowAlert(this, alert_dangerous_host,
-						alert_level_error, alert_msg);
+      /* TODO migrate alert */
+      //~ iface->getAlertsManager()->storeFlowAlert(this, alert_dangerous_host,
+						//~ alert_level_error, alert_msg);
     }
 
     blacklist_alarm_emitted = true;
@@ -770,8 +726,6 @@ char* Flow::print(char *buf, u_int buf_len) {
 bool Flow::dumpFlow(bool idle_flow) {
   bool rc = false;
   time_t now;
-
-  dumpFlowAlert();
 
   if(((cli2srv_packets - last_db_dump.cli2srv_packets) == 0)
      && ((srv2cli_packets - last_db_dump.srv2cli_packets) == 0))

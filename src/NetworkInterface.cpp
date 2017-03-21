@@ -187,7 +187,7 @@ NetworkInterface::NetworkInterface(const char *name,
   if((host_pools = new HostPools(this)) == NULL)
     throw "Not enough memory";
 
-  alertLevel = alertsManager->getNumAlerts(true);
+  alertLevel = alertsManager->getNumEngagedAlerts();
 
 #ifdef linux
   /*
@@ -774,9 +774,10 @@ void NetworkInterface::triggerTooManyFlowsAlert() {
 	     ntop->getPrefs()->get_http_prefix(),
 	     id, get_name());
 
-    alertsManager->engageInterfaceAlert(this,
+    /* TODO migrate alert */
+    /*alertsManager->engageInterfaceAlert(this,
 					(char*)"app_misconfiguration",
-					alert_app_misconfiguration, alert_level_error, alert_msg);
+					alert_app_misconfiguration, alert_level_error, alert_msg);*/
     tooManyFlowsAlertTriggered = true;
   }
 }
@@ -792,9 +793,10 @@ void NetworkInterface::triggerTooManyHostsAlert() {
 	     ntop->getPrefs()->get_http_prefix(),
 	     id, get_name());
 
-    alertsManager->releaseInterfaceAlert(this,
+    /* TODO migrate alert */
+    /*alertsManager->releaseInterfaceAlert(this,
 					 (char*)"app_misconfiguration",
-					 alert_app_misconfiguration, alert_level_error, alert_msg);
+					 alert_app_misconfiguration, alert_level_error, alert_msg);*/
     tooManyHostsAlertTriggered = true;
   }
 }

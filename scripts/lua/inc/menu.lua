@@ -97,8 +97,6 @@ end
 
 interface.select(ifname)
 if ntop.getPrefs().are_alerts_enabled == true then
-
-   local alert_cache = interface.getCachedNumAlerts()
    local active = ""
    local style = ""
    local color = ""
@@ -106,10 +104,6 @@ if ntop.getPrefs().are_alerts_enabled == true then
    -- if alert_cache["num_alerts_engaged"] > 0 then
    -- color = 'style="color: #B94A48;"' -- bootstrap danger red
    -- end
-
-   if alert_cache["num_alerts_engaged"] == 0 and alert_cache["alerts_stored"] == false then
-      style = ' style="display: none;"'
-   end
 
    if active_page == "alerts" then
       active = ' active'
