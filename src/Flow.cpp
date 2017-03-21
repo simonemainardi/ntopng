@@ -265,29 +265,6 @@ void Flow::dumpFlowAlert() {
     ntop->getTrace()->traceEvent(TRACE_INFO, "[%s] %s", msg, f);
 
     switch(status) {
-    case status_normal:
-      do_dump = false;
-      break;
-
-    case status_slow_tcp_connection: /* 1 */
-    case status_slow_application_header: /* 2 */
-    case status_slow_data_exchange: /* 3 */
-    case status_low_goodput: /* 4 */
-    case status_tcp_connection_issues: /* 6 - i.e. too many retransmission ooo... or similar */
-      /* Don't log them for the time being otherwise we'll have too many flows */
-      do_dump = false;
-      break;
-
-    case status_suspicious_tcp_syn_probing: /* 5 */
-    case status_suspicious_tcp_probing:     /* 7 */
-    case status_tcp_connection_refused: /* 9 */
-      do_dump = ntop->getPrefs()->are_probing_alerts_enabled();
-      break;
-
-    case status_flow_when_interface_alerted /* 8 */:
-      do_dump = ntop->getPrefs()->do_dump_flow_alerts_when_iface_alerted();
-      break;
-    }
 
     if(do_dump && cli_host && srv_host) {
       char c_buf[256], s_buf[256], *c, *s, fbuf[256], alert_msg[1024];
@@ -1257,6 +1234,7 @@ void Flow::lua(lua_State* vm, AddressTree * ptree,
 
   lua_push_int_table_entry(vm, "bytes", cli2srv_bytes+srv2cli_bytes);
   lua_push_int_table_entry(vm, "goodput_bytes", cli2srv_goodput_bytes+srv2cli_goodput_bytes);
+  lua_push_int_table_entry(vm, "vlan", get_vlan_id());
 
   if(details_level >= details_high) {
 
@@ -1283,7 +1261,6 @@ void Flow::lua(lua_State* vm, AddressTree * ptree,
       lua_push_nil_table_entry(vm, "srv.host");
     }
 
-    lua_push_int_table_entry(vm, "vlan", get_vlan_id());
     lua_push_str_table_entry(vm, "proto.l4", get_protocol_name());
 
     if(((cli2srv_packets+srv2cli_packets) > NDPI_MIN_NUM_PACKETS)

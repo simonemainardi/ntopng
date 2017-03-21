@@ -25,6 +25,54 @@ end
 
 -- ##############################################################################
 
+function processAnomalousFlows()
+   local probing_alerts_enabled = ntop.getCache("ntopng.prefs.probing_alerts") == "1"
+   local interface_alerts_enabled = ntop.getCache("ntopng.alerts.dump_alerts_when_iface_is_alerted") == "1"
+
+   local res = interface.getFlowsInfo(nil, {suspiciousFlowsOnly=true})
+
+   if res.flows then
+      for _, flow in pairs(res.flows) do
+         if not flow["flow.alerted"] then
+            local status = flow["flow.status"]
+            local cli_key = hostinfo2hostkey(flow, "cli")
+            local srv_key = hostinfo2hostkey(flow, "srv")
+            local alert = nil
+
+            -- Probing alerts
+            if ((status == "slow_tcp_connection") or
+                (status == "slow_app_header") or
+                (status == "slow_data") or
+                (status == "low_goodput") or
+                (status == "tcp_connection_issues")) then
+               -- Don't log them for the time being otherwise we'll have too many flows
+            elseif ((status == "tcp_syn_probing") or
+                (status == "tcp_probing") or
+                (status == "tcp_connection_refused")) then
+               if probing_alerts_enabled then
+                  alert = FlowAlert(cli_key, srv_key)
+                  alert:typeBadFlow(status)
+               end
+            elseif (status == "alerted_interface") then
+               if interface_alerts_enabled then
+                  alert = FlowAlert(cli_key, srv_key)
+                  alert:typeAlertedInterface()
+               end
+            else
+               io.write("Unknown flow status: "..status.."\n")
+            end
+
+            if alert ~= nil then
+               interface.alert(tostring(alert))
+               interface.setFlowAlerted(flow["ntopng.key"])
+            end
+         end
+      end
+   end
+end
+
+-- ##############################################################################
+
 -- Formats an entity, returning a pretty name and url
 function formatEntity(entity_type, entity_value, join_html)
    local entity = entity_value or ""
@@ -1017,8 +1065,7 @@ end
 
 -- #################################
 
-local function drawDropdown(status, selection_name, active_entry, entries_table)
-   -- alert_level_keys and alert_type_keys are defined in lua_utils
+local function drawDropdown(status, selection_name, active_entry)
    local id_to_label
    if selection_name == "severity" then
       id_to_label = alertSeverityLabel
@@ -1049,7 +1096,7 @@ local function drawDropdown(status, selection_name, active_entry, entries_table)
 
    local button_label = firstToUpper(selection_name)
    if active_entry ~= nil and active_entry ~= "" then
-      button_label = firstToUpper(active_entry)..'<span class="glyphicon glyphicon-filter"></span>'
+      button_label = id_to_label(active_entry)..'<span class="glyphicon glyphicon-filter"></span>'
    end
 
    buttons = buttons..'<button class="btn btn-link dropdown-toggle" data-toggle="dropdown">'..button_label
@@ -1064,10 +1111,10 @@ local function drawDropdown(status, selection_name, active_entry, entries_table)
    for _, entry in pairs(actual_entries) do
       local id = entry["id"]
       local count = entry["count"]
-      local label = id_to_label(id, true)
+      local label = id_to_label(id)
 
       class_active = ""
-      if label == active_entry then class_active = ' class="active"' end
+      if id == active_entry then class_active = ' class="active"' end
       -- buttons = buttons..'<li'..class_active..'><a href="'..ntop.getHttpPrefix()..'/lua/show_alerts.lua?status='..status
       buttons = buttons..'<li'..class_active..'><a href="?status='..status
       buttons = buttons..'&alert_'..selection_name..'='..id..'">'
@@ -1701,19 +1748,13 @@ function getCurrentStatus() {
 
 	 -- TODO this condition should be removed and page integration support implemented
 	 if((isEmptyString(_GET["entity"])) and isEmptyString(_GET["epoch_begin"]) and isEmptyString(_GET["epoch_end"])) then
-	    -- alert_level_keys and alert_type_keys are defined in lua_utils
-	    local alert_severities = {}
-	    for _, s in pairs(alert_level_keys) do alert_severities[#alert_severities +1 ] = s end
-	    local alert_types = {}
-	    for _, s in pairs(alert_type_keys) do alert_types[#alert_types +1 ] = s end
-
 	    local a_type, a_severity = nil, nil
 	    if clicked == "1" then
-	       if _GET["alert_type"] ~= nil then a_type = alertTypeLabel(_GET["alert_type"], true) end
-	       if _GET["alert_severity"] ~= nil then a_severity = alertSeverityLabel(_GET["alert_severity"], true) end
+	       if _GET["alert_type"] ~= nil then a_type = _GET["alert_type"] end
+	       if _GET["alert_severity"] ~= nil then a_severity = _GET["alert_severity"] end
 	    end
 
-	    print(drawDropdown(t["status"], "type", a_type, alert_types))
+	    print(drawDropdown(t["status"], "type", a_type))
 	    print(drawDropdown(t["status"], "severity", a_severity, alert_severities))
 	 elseif((not isEmptyString(_GET["entity_val"])) and (not hide_extended_title)) then
 	    if entity == "host" then
@@ -1958,9 +1999,9 @@ $('#buttonOpenDeleteModal').on('click', function() {
 
    $(".modal-body #modalDeleteAlertsMsg").html(zoomsel.data('msg') + ']]
 	 if _GET["alert_severity"] ~= nil then
-	    print(' with severity "'..alertSeverityLabel(_GET["alert_severity"], true)..'" ')
+	    print(' with severity "'..alertSeverityLabel(_GET["alert_severity"])..'" ')
 	 elseif _GET["alert_type"] ~= nil then
-	    print(' with type "'..alertTypeLabel(_GET["alert_type"], true)..'" ')
+	    print(' with type "'..alertTypeLabel(_GET["alert_type"])..'" ')
 	 end
 	 print[[');
    if (lb.length == 1)

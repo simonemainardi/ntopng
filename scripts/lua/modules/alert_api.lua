@@ -63,7 +63,7 @@ end
 --------------------------------------------------------------------------------
 
 InterfaceAlert = class(Alert, function(c, ifname)
-			  Alert.init(c, 'interface', ifname, nil, nil, alert_type)
+			  Alert.init(c, 'interface', ifname, nil, nil)
 end)
 
 --------------------------------------------------------------------------------
@@ -87,17 +87,25 @@ end)
 --------------------------------------------------------------------------------
 
 NetworkAlert = class(Alert, function(c, network_name)
-			  Alert.init(c, 'network', network_name, nil, nil, alert_type)
+			  Alert.init(c, 'network', network_name, nil, nil)
 			  -- TODO network_name is optional, retrieve it if not provided
 end)
 
 --------------------------------------------------------------------------------
 
-FlowAlert = class(Alert, function(c, source_host, source_vlan, dst_host, dst_vlan)
-		     local src = hostinfo2hostkey({host=source_host, vlan=source_vlan})
-		     local dst = hostinfo2hostkey({host=dst_host, vlan=dst_vlan})
-		     Alert.init(c, 'host', src, 'host', dst, alert_type)
+FlowAlert = class(Alert, function(c, source_key, dst_key)
+		     Alert.init(c, 'host', source_key, 'host', dst_key)
 end)
+
+function FlowAlert:typeBadFlow(flowStatus)
+   self.header.alert_type = flowStatus
+   self.header.alert_severity = 'error'
+end
+
+function FlowAlert:typeAlertedInterface()
+   self.header.alert_type = "alerted_interface"
+   self.header.alert_severity = 'error'
+end
 
 --[[
 

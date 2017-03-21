@@ -316,29 +316,6 @@ end
 -- Alerts (see ntop_typedefs.h)
 -- each table entry is an array as:
 -- {"alert html string", "alert C enum value", "plain string"}
-alert_level_keys = {
-  ["info"] = "<span class='label label-info'>Info</span>",
-  ["warning"] = "<span class='label label-warning'>Warning</span>",
-  ["error"] = "<span class='label label-danger'>Error</span>",
-}
-
-alert_type_keys = {
-  ["tcp_syn_flood"] = "<i class='fa fa-tint'></i> TCP SYN Flood",
-  ["flows_flood"] = "<i class='fa fa-tint'></i> Flows Flood",
-  ["threshold_cross"] = "<i class='fa fa-arrow-circle-up'></i> Threshold Cross",
-  ["blacklist_host"] = "<i class='fa fa-frown-o'></i> Blacklist Host",
-  ["periodic_activity"] = "<i class='fa fa-clock-o'></i> Periodic Activity",
-  ["quota_exceeded"] = "<i class='fa fa-sort-asc'></i> Quota Exceeded",
-  ["malware_detected"] = "<i class='fa fa-ban'></i> Malware Detected",
-  ["ongoing_attacker"] = "<i class='fa fa-bomb'></i> Ongoing Attacker",
-  ["under_attack"] = "<i class='fa fa-bomb'></i> Under Attack",
-  ["misconfigured_app"] = "<i class='fa fa-exclamation'></i> Misconfigured App",
-  ["suspicious_activity"] = "<i class='fa fa-exclamation'></i> Suspicious Activity",
-  ["too_many_alerts"] = "<i class='fa fa-exclamation'></i> Too Many Alerts",
-  ["open_files_limit_too_small"] = "<i class='fa fa-exclamation'></i> MySQL open_files_limit too small",
-  ["interface_alerted"] = "<i class='fa fa-exclamation'></i> Interface Alerted",
-  ["flow_misbehaviour"] = "<i class='fa fa-exclamation'></i> Flow Misbehaviour",
-}
 
 alert_functions_description = {
     ["bytes"]   = "Bytes delta (sent + received)",
@@ -360,20 +337,68 @@ function noHtml(s)
    return s:gsub("<.->(.-)</.->","%1"):gsub("^%s*(.-)%s*$", "%1")
 end
 
-function alertSeverityLabel(k, nohtml)
-   if (nohtml or alert_level_keys[k] == nil) then
-      return firstToUpper(k)
-   end
-
-   return alert_level_keys[k]
+function alertSeverityLabel(k)
+   return firstToUpper(k)
 end
 
-function alertTypeLabel(k, nohtml)
-   if (nohtml or alert_type_keys[k] == nil) then
-      return firstToUpper(k)
+function alertSeverityLabelAndIcon(k)
+   local severity_to_icon = {
+      info     = "label-info",
+      warning  = "label-warning",
+      error    = "label-danger",
+   }
+   
+   local label = alertSeverityLabel(k)
+   local icon
+
+   if severity_to_icon[k] ~= nil then
+      icon = severity_to_icon[k]
+   else
+      icon = ""
    end
 
-   return alert_type_keys[k]
+   return "<span class='label "..icon.."'>"..label.."</span>"
+end
+
+function alertTypeLabel(k)
+   local flow_label = flowStatusToMessage(k)
+   if flow_label ~= k then
+      -- it was actually a flow alert
+      return flow_label
+   end
+
+   -- Split the underscores and capitalize first word letters
+   local parts = string.split(k, "_")
+   for i,part in pairs(parts) do
+      parts[i] = firstToUpper(part)
+   end
+   
+   return table.concat(parts, " ")
+end
+
+function alertTypeLabelAndIcon(k)
+   local type_to_icon = {
+      ["tcp_syn_flood"] = "fa-tint",
+      ["flows_flood"] = "fa-tint",
+      ["threshold_cross"] = "fa-arrow-circle-up",
+      ["blacklist_host"] = "fa-frown-o",
+      ["periodic_activity"] = "fa-clock-o",
+      ["quota_exceeded"] = "fa-sort-asc",
+      ["malware_detected"] = "fa-ban",
+      ["ongoing_attacker"] = "fa-bomb",
+      ["under_attack"] = "fa-bomb",
+   }
+
+   local label = alertTypeLabel(k)
+   local icon
+
+   if type_to_icon[k] ~= nil then
+      icon = type_to_icon[k]
+   else
+      icon = "fa-exclamation"
+   end
+
+   return "<i class='fa "..icon.."'></i> "..label
 end
 
 function alertEntityLabel(k, nothml)

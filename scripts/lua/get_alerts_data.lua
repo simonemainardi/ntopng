@@ -94,8 +94,9 @@ for _key,_value in ipairs(alerts) do
       row["column_duration"] = secondsToTime(tonumber(_value["alert_tstamp_end"]) - tonumber(_value["alert_tstamp"]))
    end
 
-   row["column_severity"] = alertSeverityLabel(_value["alert_severity"])
-   row["column_type"]     = alertTypeLabel(_value["alert_type"])
+   row["column_severity"] = alertSeverityLabelAndIcon(_value["alert_severity"])
+   row["column_type"]     = alertTypeLabelAndIcon(_value["alert_type"])
+
    local alert_message = _value["alert_json"] or "{}"
 
    if ((string.len(alert_message) > 0) and (string.sub(alert_message, 1, 1)) == "{") then
