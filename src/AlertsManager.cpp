@@ -711,169 +711,7 @@ int AlertsManager::openStore() {
   rc = exec_query(create_query, NULL, NULL);
   m.unlock(__FILE__, __LINE__);
 
-  snprintf(create_query, sizeof(create_query),
-	   "CREATE TABLE IF NOT EXISTS %s ("
-	   "alert_tstamp     INTEGER NOT NULL, "
-	   "alert_tstamp_end INTEGER DEFAULT NULL, "
-	   "alert_type       INTEGER NOT NULL, "
-	   "alert_severity   INTEGER NOT NULL, "
-	   "alert_entity     INTEGER NOT NULL, "
-	   "alert_entity_val TEXT NOT NULL,    "
-	   "alert_origin     TEXT DEFAULT NULL,"
-	   "alert_target     TEXT DEFAULT NULL,"
-	   "alert_json       TEXT DEFAULT NULL "
-	   "); "  // no need to create a primary key, sqlite has the rowid
-	   "CREATE INDEX IF NOT EXISTS t1i_tstamp   ON %s(alert_tstamp); "
-	   "CREATE INDEX IF NOT EXISTS t1i_tstamp_e ON %s(alert_tstamp_end); "
-	   "CREATE INDEX IF NOT EXISTS t1i_type     ON %s(alert_type); "
-	   "CREATE INDEX IF NOT EXISTS t1i_severity ON %s(alert_severity); "
-	   "CREATE INDEX IF NOT EXISTS t1i_origin   ON %s(alert_origin); "
-	   "CREATE INDEX IF NOT EXISTS t1i_target   ON %s(alert_target); "
-	   "CREATE INDEX IF NOT EXISTS t1i_entity   ON %s(alert_entity, alert_entity_val); ",
-	   ALERTS_MANAGER_TABLE_NAME, ALERTS_MANAGER_TABLE_NAME, ALERTS_MANAGER_TABLE_NAME,
-	   ALERTS_MANAGER_TABLE_NAME, ALERTS_MANAGER_TABLE_NAME, ALERTS_MANAGER_TABLE_NAME,
-	   ALERTS_MANAGER_TABLE_NAME, ALERTS_MANAGER_TABLE_NAME);
-  m.lock(__FILE__, __LINE__);
-  rc = exec_query(create_query, NULL, NULL);
-  m.unlock(__FILE__, __LINE__);
-
-  snprintf(create_query, sizeof(create_query),
-	   "CREATE TABLE IF NOT EXISTS %s ("
-	   "alert_id         TEXT NOT NULL, "
-	   "alert_tstamp     INTEGER NOT NULL, "
-	   "alert_type       INTEGER NOT NULL, "
-	   "alert_severity   INTEGER NOT NULL, "
-	   "alert_entity     INTEGER NOT NULL, "
-	   "alert_entity_val TEXT NOT NULL,    "
-	   "alert_origin     TEXT DEFAULT NULL,"
-	   "alert_target     TEXT DEFAULT NULL,"
-	   "alert_json       TEXT DEFAULT NULL "
-	   ");"
-	   "CREATE INDEX IF NOT EXISTS t2i_tstamp   ON %s(alert_tstamp); "
-	   "CREATE INDEX IF NOT EXISTS t2i_type     ON %s(alert_type); "
-	   "CREATE INDEX IF NOT EXISTS t2i_severity ON %s(alert_severity); "
-	   "CREATE INDEX IF NOT EXISTS t2i_origin   ON %s(alert_origin); "
-	   "CREATE INDEX IF NOT EXISTS t2i_target   ON %s(alert_target); "
-	   "CREATE UNIQUE INDEX IF NOT EXISTS t2i_u ON %s(alert_entity, alert_entity_val, alert_id); ",
-	   ALERTS_MANAGER_ENGAGED_TABLE_NAME, ALERTS_MANAGER_ENGAGED_TABLE_NAME, ALERTS_MANAGER_ENGAGED_TABLE_NAME,
-	   ALERTS_MANAGER_ENGAGED_TABLE_NAME, ALERTS_MANAGER_ENGAGED_TABLE_NAME,
-	   ALERTS_MANAGER_ENGAGED_TABLE_NAME, ALERTS_MANAGER_ENGAGED_TABLE_NAME);
-  m.lock(__FILE__, __LINE__);
-  rc = exec_query(create_query, NULL, NULL);
-  m.unlock(__FILE__, __LINE__);
-
-  snprintf(create_query, sizeof(create_query),
-	   "CREATE TABLE IF NOT EXISTS %s ("
-	   "alert_tstamp     INTEGER NOT NULL, "
-	   "alert_type       INTEGER NOT NULL, "
-	   "alert_severity   INTEGER NOT NULL, "
-	   "alert_json       TEXT DEFAULT NULL, "
-	   "vlan_id          INTEGER NOT NULL DEFAULT 0, "
-	   "proto            INTEGER NOT NULL DEFAULT 0, "
-	   "l7_proto         INTEGER NOT NULL DEFAULT %u, "
-	   "first_switched   INTEGER NOT NULL DEFAULT 0, "
-	   "last_switched    INTEGER NOT NULL DEFAULT 0, "
-	   "cli_country      TEXT DEFAULT NULL, "
-	   "srv_country      TEXT DEFAULT NULL, "
-	   "cli_os           TEXT DEFAULT NULL, "
-	   "srv_os           TEXT DEFAULT NULL, "
-	   "cli_asn          TEXT DEFAULT NULL, "
-	   "srv_asn          TEXT DEFAULT NULL, "
-	   "cli_addr         TEXT DEFAULT NULL, "
-	   "srv_addr         TEXT DEFAULT NULL, "
-	   "cli_port         INTEGER NOT NULL DEFAULT 0, "
-	   "srv_port         INTEGER NOT NULL DEFAULT 0, "
-	   "cli2srv_bytes    INTEGER NOT NULL DEFAULT 0, "
-	   "srv2cli_bytes    INTEGER NOT NULL DEFAULT 0, "
-	   "cli2srv_packets  INTEGER NOT NULL DEFAULT 0, "
-	   "srv2cli_packets  INTEGER NOT NULL DEFAULT 0, "
-	   "cli2srv_tcpflags INTEGER DEFAULT NULL, "
-	   "srv2cli_tcpflags INTEGER DEFAULT NULL, "
-	   "cli_blacklisted  INTEGER NOT NULL DEFAULT 0, "
-	   "srv_blacklisted  INTEGER NOT NULL DEFAULT 0, "
-	   "cli_localhost    INTEGER NOT NULL DEFAULT 0, "
-	   "srv_localhost    INTEGER NOT NULL DEFAULT 0 "
-	   ");"
-	   "CREATE INDEX IF NOT EXISTS t3i_tstamp    ON %s(alert_tstamp); "
-	   "CREATE INDEX IF NOT EXISTS t3i_type      ON %s(alert_type); "
-	   "CREATE INDEX IF NOT EXISTS t3i_severity  ON %s(alert_severity); "
-	   "CREATE INDEX IF NOT EXISTS t3i_vlanid    ON %s(vlan_id); "
-	   "CREATE INDEX IF NOT EXISTS t3i_proto     ON %s(proto); "
-	   "CREATE INDEX IF NOT EXISTS t3i_l7proto   ON %s(l7_proto); "
-	   "CREATE INDEX IF NOT EXISTS t3i_fswitched ON %s(first_switched); "
-	   "CREATE INDEX IF NOT EXISTS t3i_lswitched ON %s(last_switched); "
-	   "CREATE INDEX IF NOT EXISTS t3i_ccountry  ON %s(cli_country); "
-	   "CREATE INDEX IF NOT EXISTS t3i_scountry  ON %s(srv_country); "
-	   "CREATE INDEX IF NOT EXISTS t3i_cos       ON %s(cli_os); "
-	   "CREATE INDEX IF NOT EXISTS t3i_sos       ON %s(srv_os); "
-	   "CREATE INDEX IF NOT EXISTS t3i_casn      ON %s(cli_asn); "
-	   "CREATE INDEX IF NOT EXISTS t3i_sasn      ON %s(srv_asn); "
-	   "CREATE INDEX IF NOT EXISTS t3i_caddr     ON %s(cli_addr); "
-	   "CREATE INDEX IF NOT EXISTS t3i_saddr     ON %s(srv_addr); "
-	   "CREATE INDEX IF NOT EXISTS t3i_cport     ON %s(cli_port); "
-	   "CREATE INDEX IF NOT EXISTS t3i_sport     ON %s(srv_port); "
-	   "CREATE INDEX IF NOT EXISTS t3i_clocal    ON %s(cli_localhost); "
-	   "CREATE INDEX IF NOT EXISTS t3i_slocal    ON %s(srv_localhost); ",
-	   ALERTS_MANAGER_FLOWS_TABLE_NAME,
-	   NDPI_PROTOCOL_UNKNOWN,
-	   ALERTS_MANAGER_FLOWS_TABLE_NAME, ALERTS_MANAGER_FLOWS_TABLE_NAME,
-	   ALERTS_MANAGER_FLOWS_TABLE_NAME, ALERTS_MANAGER_FLOWS_TABLE_NAME,
-	   ALERTS_MANAGER_FLOWS_TABLE_NAME, ALERTS_MANAGER_FLOWS_TABLE_NAME,
-	   ALERTS_MANAGER_FLOWS_TABLE_NAME, ALERTS_MANAGER_FLOWS_TABLE_NAME,
-	   ALERTS_MANAGER_FLOWS_TABLE_NAME, ALERTS_MANAGER_FLOWS_TABLE_NAME,
-	   ALERTS_MANAGER_FLOWS_TABLE_NAME, ALERTS_MANAGER_FLOWS_TABLE_NAME,
-	   ALERTS_MANAGER_FLOWS_TABLE_NAME, ALERTS_MANAGER_FLOWS_TABLE_NAME,
-	   ALERTS_MANAGER_FLOWS_TABLE_NAME, ALERTS_MANAGER_FLOWS_TABLE_NAME,
-	   ALERTS_MANAGER_FLOWS_TABLE_NAME, ALERTS_MANAGER_FLOWS_TABLE_NAME,
-	   ALERTS_MANAGER_FLOWS_TABLE_NAME, ALERTS_MANAGER_FLOWS_TABLE_NAME);
-  m.lock(__FILE__, __LINE__);
-  rc = exec_query(create_query, NULL, NULL);
-  m.unlock(__FILE__, __LINE__);
-
   return rc;
-}
-
-/* **************************************************** */
-
-bool AlertsManager::isAlertEngaged(AlertEntity alert_entity, const char *alert_entity_value, const char *engaged_alert_id) {
-  char query[STORE_MANAGER_MAX_QUERY];
-  sqlite3_stmt *stmt = NULL;
-  int rc;
-  bool found = false;
-
-  snprintf(query, sizeof(query),
-	   "SELECT 1 "
-	   "FROM %s "
-	   "WHERE alert_entity = ? AND alert_entity_val = ? AND alert_id = ? ",
-	   ALERTS_MANAGER_ENGAGED_TABLE_NAME);
-
-  m.lock(__FILE__, __LINE__);
-  if(sqlite3_prepare(db, query, -1, &stmt, 0)) {
-    ntop->getTrace()->traceEvent(TRACE_ERROR, "Unable to prepare statement for query %s.", query);
-    goto out;
-  } else if(sqlite3_bind_int(stmt,   1, static_cast<int>(alert_entity))
-	    || sqlite3_bind_text(stmt,  2, alert_entity_value, -1, SQLITE_STATIC)
-	    || sqlite3_bind_text(stmt,  3, engaged_alert_id, -1, SQLITE_STATIC)) {
-    ntop->getTrace()->traceEvent(TRACE_ERROR, "Unable to bind values to prepared statement for query %s.", query);
-    goto out;
-  }
-
-  while((rc = sqlite3_step(stmt)) != SQLITE_DONE) {
-    if(rc == SQLITE_ROW) {
-      found = true;
-      // ntop->getTrace()->traceEvent(TRACE_NORMAL, "%s\n", sqlite3_column_text(stmt, 0));
-    } else if(rc == SQLITE_ERROR) {
-      ntop->getTrace()->traceEvent(TRACE_INFO, "SQL Error: step");
-      rc = 1;
-      goto out;
-    }
-  }
-
- out:
-  if(stmt) sqlite3_finalize(stmt);
-  m.unlock(__FILE__, __LINE__);
-
-  return found;
 }
 
 /* **************************************************** */
@@ -906,8 +744,10 @@ void AlertsManager::markForMakeRoom(AlertEntity alert_entity, const char *alert_
 void AlertsManager::makeRoom(AlertEntity alert_entity, const char *alert_entity_value, const char *table_name) {
   if(!ntop->getPrefs()->are_alerts_disabled() && make_room) {
     make_room = false;
-    int max_num = strncmp(table_name, ALERTS_MANAGER_FLOWS_TABLE_NAME, strlen(ALERTS_MANAGER_FLOWS_TABLE_NAME))
-      ? ntop->getPrefs()->get_max_num_alerts_per_entity() : ntop->getPrefs()->get_max_num_flow_alerts();
+    //~ int max_num = strncmp(table_name, ALERTS_MANAGER_FLOWS_TABLE_NAME, strlen(ALERTS_MANAGER_FLOWS_TABLE_NAME))
+      //~ ? ntop->getPrefs()->get_max_num_alerts_per_entity() : ntop->getPrefs()->get_max_num_flow_alerts();
+    // TODO fixme
+    int max_num = ntop->getPrefs()->get_max_num_alerts_per_entity();
     int num = 0;
     ntop->getTrace()->traceEvent(TRACE_DEBUG, "Maximum configured number of alerts per entity: %i", max_num);
 

@@ -120,7 +120,9 @@ end)
 
 --------------------------------------------------------------------------------
 
-FlowAlert = class(Alert, function(c, source_key, dst_key)
+FlowAlert = class(Alert, function(c, flow)
+		     local cli_key = hostinfo2hostkey(flow, "cli")
+		     local srv_key = hostinfo2hostkey(flow, "srv")
 		     Alert.init(c, 'host', source_key, 'host', dst_key)
 end)
 

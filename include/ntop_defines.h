@@ -572,9 +572,6 @@
 #define ALERTS_MANAGER_MAX_ENTITY_ALERTS     1024
 #define ALERTS_MANAGER_MAX_FLOW_ALERTS       16384
 #define ALERTS_MANAGER_TABLE                 "alerts"
-#define ALERTS_MANAGER_TABLE_NAME            "closed_alerts" /* TODO: remove */
-#define ALERTS_MANAGER_FLOWS_TABLE_NAME      "flows_alerts" /* TODO: remove */
-#define ALERTS_MANAGER_ENGAGED_TABLE_NAME    "engaged_alerts" /* TODO: remove */
 #define ALERTS_MANAGER_STORE_NAME            "alerts_v3.db"
 #define ALERTS_MANAGER_QUEUE_NAME            "ntopng.alerts.ifid_%i.queue"
 #define ALERTS_MANAGER_MAKE_ROOM_SET_NAME    "ntopng.alerts.ifid_%i.make_room"

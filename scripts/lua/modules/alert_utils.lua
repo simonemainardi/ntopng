@@ -35,8 +35,6 @@ function processAnomalousFlows()
       for _, flow in pairs(res.flows) do
          if not flow["flow.alerted"] then
             local status = flow["flow.status"]
-            local cli_key = hostinfo2hostkey(flow, "cli")
-            local srv_key = hostinfo2hostkey(flow, "srv")
             local alert = nil
 
             -- Probing alerts
@@ -50,12 +48,12 @@ function processAnomalousFlows()
                 (status == "tcp_probing") or
                 (status == "tcp_connection_refused")) then
                if probing_alerts_enabled then
-                  alert = FlowAlert(cli_key, srv_key)
+                  alert = FlowAlert(flow)
                   alert:typeBadFlow(status)
                end
             elseif (status == "alerted_interface") then
                if interface_alerts_enabled then
-                  alert = FlowAlert(cli_key, srv_key)
+                  alert = FlowAlert(flow)
                   alert:typeAlertedInterface()
                end
             else
@@ -126,6 +124,19 @@ function formatAlertMessage(alert_json)
       local alert_detail = alert.alert_detail or {}
       local source_msg = formatEntityType(alert.header.source_type) .. " " .. formatEntity(alert.header.source_type, alert.header.source_value, true)
       local target_msg = formatEntityType(alert.header.target_type) .. " " .. formatEntity(alert.header.target_type, alert.header.target_value, true)
+
+      if ((alert.header.source_type == "host") and (alert.header.target_type == "host")) then
+         if alert_type == "alerted_interface" then
+            return "Interface was alerted"
+         else
+            -- Is this a flow alert?
+            local message = flowStatusToMessage(alert_type)
+            if message ~= alert_type then
+               -- Yes it is
+               return source_msg.." > "..target_msg
+            end
+         end
+      end
 
       if alert_type == "threshold_cross" then
          local msg = "Threshold Crossed by " .. source_msg

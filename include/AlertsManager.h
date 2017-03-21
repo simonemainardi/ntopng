@@ -41,7 +41,6 @@ class AlertsManager : protected StoreManager, protected GenericHash {
   int openStore();
   
   /* methods used for alerts that have a timespan */
-  bool isAlertEngaged(AlertEntity alert_entity, const char *alert_entity_value, const char *engaged_alert_id);
   void markForMakeRoom(AlertEntity alert_entity, const char *alert_entity_value, const char *table_name);
   int deleteOldestAlert(AlertEntity alert_entity, const char *alert_entity_value, const char *table_name, u_int32_t max_num_rows);
 
