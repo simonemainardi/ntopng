@@ -23,3 +23,7 @@ local ifnames = interface.getIfNames()
 callback_utils.foreachInterface(ifnames, false, function(ifname, ifstats)
   processAnomalousFlows()
 end)
+
+interface.select("en4")
+processAnomalousHosts()
+

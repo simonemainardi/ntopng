@@ -156,6 +156,7 @@ void Host::initialize(u_int8_t _mac[6], u_int16_t _vlanId, bool init_all) {
   snprintf(redis_key, sizeof(redis_key), HOST_SERIALIZED_KEY, iface->get_id(), k, vlan_id);
   dns = NULL, http = NULL, categoryStats = NULL, top_sites = NULL, old_sites = NULL,
     user_activities = NULL, ifa_stats = NULL;
+  status_information = NULL;
 
   if(init_all) {
     char *strIP = ip.print(buf, sizeof(buf));
@@ -166,6 +167,9 @@ void Host::initialize(u_int8_t _mac[6], u_int16_t _vlanId, bool init_all) {
     updateHostTrafficPolicy(host);
     
     if(localHost) {
+      if((status_information = new StatusInformation()) == NULL)
+	throw "Not enough memory";
+
       /* initialize this in any case to support runtime 'are_top_talkers_enabled' changes */
       top_sites = new FrequentStringItems(HOST_SITES_TOP_NUMBER);
       old_sites = strdup("{}");
@@ -224,14 +228,6 @@ void Host::initialize(u_int8_t _mac[6], u_int16_t _vlanId, bool init_all) {
 	    blacklisted_host = true;
 	  }
 	}
-      }
-
-      if(blacklisted_host) {
-	char msg[64];
-
-	snprintf(msg, sizeof(msg), "Blacklisted host found %s", host);
-	ntop->getTrace()->traceEvent(TRACE_INFO, "%s", msg);
-	iface->getAlertsManager()->storeHostAlert(this, alert_malware_detection, alert_level_error, msg);
       }
     }
 
@@ -547,6 +543,9 @@ void Host::lua(lua_State* vm, AddressTree *ptree,
       lua_push_str_table_entry(vm, "sites", top_sites->json());
       lua_push_str_table_entry(vm, "sites.old", old_sites);
     }
+
+    if(isLocalHost() && status_information)
+      status_information->lua(vm);
   }
 
   if(localHost) {
@@ -1015,8 +1014,9 @@ bool Host::deserialize(char *json_str, char *key) {
 
 void Host::updateSynFlags(time_t when, u_int8_t flags, Flow *f, bool syn_sent) {
   AlertCounter *counter = syn_sent ? syn_flood_attacker_alert : syn_flood_victim_alert;
+  HostStatus host_status;
 
-  if(!localHost || !triggerAlerts()) return;
+  if(!isLocalHost() || !triggerAlerts()) return;
 
   if(counter->incHits(when)) {
     char ip_buf[48], flow_buf[256], msg[512], *h;
@@ -1032,6 +1032,8 @@ void Host::updateSynFlags(time_t when, u_int8_t flags, Flow *f, bool syn_sent) {
     h = ip.print(ip_buf, sizeof(ip_buf));
 
     if(syn_sent) {
+      host_status = host_status_syn_flooder;
+
       error_msg = "Host <A HREF=%s/lua/host_details.lua?host=%s&ifname=%s>%s</A> is a SYN flooder [%u SYNs sent in the last %u sec] %s";
       snprintf(msg, sizeof(msg),
 	       error_msg, ntop->getPrefs()->get_http_prefix(),
@@ -1040,10 +1042,13 @@ void Host::updateSynFlags(time_t when, u_int8_t flags, Flow *f, bool syn_sent) {
 	       counter->getOverThresholdDuration(),
 	       f->print(flow_buf, sizeof(flow_buf)));
     } else {
+      host_status = host_status_syn_flood_target;
+
       char attacker_buf[64], *attacker_str;
       Host *attacker = f->get_srv_host();
       IpAddress *aip = attacker->get_ip();
       char aip_buf[48], *aip_ptr;
+
 
       attacker_str = attacker->get_ip()->print(attacker_buf, sizeof(attacker_buf));
       aip_ptr = aip->print(aip_buf, sizeof(aip_buf));
@@ -1057,7 +1062,11 @@ void Host::updateSynFlags(time_t when, u_int8_t flags, Flow *f, bool syn_sent) {
     }
 
     ntop->getTrace()->traceEvent(TRACE_INFO, "SYN Flood: %s", msg);
+
     /* the f->get_srv_host() is just a guess */
+
+    status_information->setStatus(host_status);
+
     iface->getAlertsManager()->storeHostAlert(this, alert_syn_flood, alert_level_error, msg,
 					      syn_sent ? this /* .. we are the cause of the trouble */ : f->get_srv_host(),
 					      syn_sent ? f->get_srv_host() /* .. the srve is a victim .. */: this);
@@ -1081,6 +1090,9 @@ void Host::incNumFlows(bool as_client) {
 	       h, iface->get_name(), h, max_num_active_flows);
 
       ntop->getTrace()->traceEvent(TRACE_INFO, "Begin scan attack: %s", msg);
+
+      status_information->setStatus(host_status_scanner);
+
       iface->getAlertsManager()->engageHostAlert(this,
 						 (char*)"scan_attacker",
 						 alert_flow_flood, alert_level_error, msg,
@@ -1102,6 +1114,9 @@ void Host::incNumFlows(bool as_client) {
 	       h, iface->get_name(), h, max_num_active_flows);
 
       ntop->getTrace()->traceEvent(TRACE_INFO, "Begin scan attack: %s", msg);
+
+      status_information->setStatus(host_status_scan_target);
+
       iface->getAlertsManager()->engageHostAlert(this,
 						 (char*)"scan_victim",
 						 alert_flow_flood, alert_level_error, msg,
@@ -1130,6 +1145,9 @@ void Host::decNumFlows(bool as_client) {
 		 h, iface->get_name(), h, max_num_active_flows);
 
 	ntop->getTrace()->traceEvent(TRACE_INFO, "End scan attack: %s", msg);
+
+	status_information->clearStatus(host_status_scanner);
+	
 	iface->getAlertsManager()->releaseHostAlert(this,
 						    (char*)"scan_attacker",
 						    alert_flow_flood, alert_level_error, msg);
@@ -1152,6 +1170,9 @@ void Host::decNumFlows(bool as_client) {
 		 h, iface->get_name(), h, max_num_active_flows);
 
 	ntop->getTrace()->traceEvent(TRACE_INFO, "End scan attack: %s", msg); // TODO: remove
+
+	status_information->clearStatus(host_status_scan_target);
+
 	iface->getAlertsManager()->releaseHostAlert(this,
 						    (char*)"scan_victim",
 						    alert_flow_flood, alert_level_error, msg);
@@ -1260,6 +1281,9 @@ void Host::updateStats(struct timeval *tv) {
     snprintf(msg, sizeof(msg),
 	     error_msg, ntop->getPrefs()->get_http_prefix(),
 	     h, iface->get_name(), h, host_quota_mb);
+
+    status_information->setStatus(host_status_above_quota);
+    
     iface->getAlertsManager()->storeHostAlert(this, alert_quota, alert_level_warning, msg);
   }
 }

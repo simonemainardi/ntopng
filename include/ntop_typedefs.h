@@ -202,6 +202,14 @@ typedef enum {
 } FlowStatus;
 
 typedef enum {
+  host_status_syn_flooder = 0 /* 0 */,
+  host_status_syn_flood_target /* 1 */,
+  host_status_scanner /* 2 */,
+  host_status_scan_target /* 3 */,
+  host_status_above_quota /* 4 */,
+} HostStatus;
+
+typedef enum {
   details_normal = 0,
   details_high,
   details_higher,

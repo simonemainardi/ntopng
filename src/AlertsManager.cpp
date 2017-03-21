@@ -370,6 +370,9 @@ int AlertsManager::storeAlert(Alert *alert) {
  out:
   if(stmt) sqlite3_finalize(stmt);
   m.unlock(__FILE__, __LINE__);
+  
+  if(rc == 0)
+    setStored(alert); /* Here only if db write has been successful */
 
   return rc;
 }
@@ -409,6 +412,37 @@ void AlertsManager::incDecEngagedAlertsCounters(Alert *alert, bool increase) {
 	 && StoreManager::iface->incDecHostEngagedAlertsCounter(target_value, increase)
 	 && increase)
 	alert->targetCounterIncreased(); /* Alert target is currently in ntopng hosts cache */
+  }
+}
+
+/* **************************************************** */
+
+void AlertsManager::updateStatusInformation(Alert *alert, bool status_alerted) {
+  const char *source_type = NULL, *source_value = NULL,
+    *target_type = NULL, *target_value = NULL;
+  const char *alert_type = NULL;
+
+  if(!alert || (alert_type = alert->getHeaderField("alert_type")) == NULL)
+    return;
+
+  source_type = alert->getHeaderField("source_type");
+  source_value = alert->getHeaderField("source_value");
+
+  /* Hosts require engaged alert counters to be in sync */
+
+  if(source_type && source_value
+     && !strncmp(source_type, "host", strlen("host"))) {
+    if(StoreManager::iface)
+      StoreManager::iface->hostStatusAlerted(source_value, alert_type, status_alerted);
+  }
+
+  target_type = alert->getHeaderField("target_type");
+  target_value = alert->getHeaderField("target_value");
+
+  if(target_type && target_value
+     && !strncmp(target_type, "host", strlen("host"))) {
+    if(StoreManager::iface)
+      StoreManager::iface->hostStatusAlerted(target_value, alert_type, status_alerted);
   }
 }
 
@@ -461,6 +495,7 @@ bool AlertsManager::setEngaged(Alert *alert) {
     return false;
   else {
     incDecEngagedAlertsCounters(a, true /* counters++ */);
+    updateStatusInformation(a, true /* alerted */);
     return true;
   }
 }
@@ -482,6 +517,7 @@ bool AlertsManager::setReleased(Alert *alert) {
     ret = false;
   else {
     incDecEngagedAlertsCounters(a, false /* counters-- */);
+    updateStatusInformation(a, false /* no longer alerted */);
     delete a;
     ret = true;
   }
@@ -489,6 +525,18 @@ bool AlertsManager::setReleased(Alert *alert) {
   enablePurge();
 
   return ret;
+}
+
+/* **************************************************** */
+
+bool AlertsManager::setStored(Alert *alert) {
+  /* Stored alerts don't go through the internal hash */
+  if(!alert)
+    return true;
+
+  updateStatusInformation(alert, true /* alert sent */);
+
+  return true;
 }
 
 /* **************************************************** */

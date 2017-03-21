@@ -186,6 +186,7 @@ using namespace std;
 #include "PacketDumperTuntap.h"
 #include "GenericHashEntry.h"
 #include "AlertCounter.h"
+#include "StatusInformation.h"
 #include "GenericTrafficElement.h"
 #include "GenericHost.h"
 #include "GenericHash.h"

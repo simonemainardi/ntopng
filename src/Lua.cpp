@@ -565,7 +565,7 @@ static int ntop_get_interface_hosts(lua_State* vm, LocationPolicy location) {
   NetworkInterface *ntop_interface = getCurrentInterface(vm);
   bool show_details = true;
   char *sortColumn = (char*)"column_ip", *country = NULL, *os_filter = NULL, *mac_filter = NULL;
-  bool a2zSortOrder = true;
+  bool a2zSortOrder = true, anomalousOnly = false;
   u_int16_t vlan_filter = 0;
   u_int32_t asn_filter = (u_int32_t)-1;
   int16_t network_filter = -2;
@@ -588,6 +588,7 @@ static int ntop_get_interface_hosts(lua_State* vm, LocationPolicy location) {
   if(lua_type(vm,11) == LUA_TSTRING)  mac_filter     = (char*)lua_tostring(vm, 11);
   if(lua_type(vm,12) == LUA_TNUMBER)  pool_filter    = (u_int16_t)lua_tonumber(vm, 12);
   if(lua_type(vm,13) == LUA_TNUMBER)  ipver_filter   = (u_int8_t)lua_tonumber(vm, 13);
+  if(lua_type(vm,14) == LUA_TBOOLEAN) anomalousOnly  = lua_toboolean(vm, 14) ? true : false;
 
   if(!ntop_interface ||
     ntop_interface->getActiveHostsList(vm, get_allowed_nets(vm),
@@ -596,7 +597,8 @@ static int ntop_get_interface_hosts(lua_State* vm, LocationPolicy location) {
 				       vlan_filter, os_filter, asn_filter,
 				       network_filter, pool_filter, ipver_filter,
 				       sortColumn, maxHits,
-				       toSkip, a2zSortOrder) < 0)
+				       toSkip, a2zSortOrder,
+				       anomalousOnly) < 0)
     return(CONST_LUA_ERROR);
 
   return(CONST_LUA_OK);
@@ -650,7 +652,7 @@ static int ntop_get_grouped_interface_hosts(lua_State* vm) {
 					    vlan_filter, os_filter,
 					    asn_filter, network_filter,
 					    pool_filter, 0 /* any */,
-					    hostsOnly, groupBy) < 0)
+					    hostsOnly, groupBy, false) < 0)
     return(CONST_LUA_ERROR);
 
   return(CONST_LUA_OK);

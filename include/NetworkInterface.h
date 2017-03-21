@@ -149,7 +149,8 @@ class NetworkInterface {
 		u_int16_t vlan_id, char *osFilter,
 		u_int32_t asnFilter, int16_t networkFilter,
 		u_int16_t pool_filter, u_int8_t ipver_filter,
-		bool hostMacsOnly, char *sortColumn);
+		bool hostMacsOnly, char *sortColumn,
+		bool anomalousOnly);
   int sortMacs(struct flowHostRetriever *retriever,
 	       u_int16_t vlan_id, bool skipSpecialMacs,
 	       bool hostMacsOnly, const char *manufacturer,
@@ -318,7 +319,8 @@ class NetworkInterface {
 			 u_int32_t asnFilter, int16_t networkFilter,
 			 u_int16_t pool_filter, u_int8_t ipver_filter,
 			 char *sortColumn, u_int32_t maxHits,
-			 u_int32_t toSkip, bool a2zSortOrder);
+			 u_int32_t toSkip, bool a2zSortOrder,
+			 bool anomalousOnly);
   int getActiveHostsGroup(lua_State* vm,
 			  AddressTree *allowed_hosts,
 			  bool host_details, LocationPolicy location,
@@ -326,7 +328,8 @@ class NetworkInterface {
 			  u_int16_t vlan_id, char *osFilter,
 			  u_int32_t asnFilter, int16_t networkFilter,
 			  u_int16_t pool_filter, u_int8_t ipver_filter,
-			  bool hostsOnly, char *groupColumn);
+			  bool hostsOnly, char *groupColumn,
+			  bool anomalousOnly);
   int getActiveMacList(lua_State* vm, u_int16_t vlan_id,
 		       bool skipSpecialMacs,
 		       bool hostMacsOnly, const char *manufacturer,
@@ -471,6 +474,7 @@ class NetworkInterface {
     return 0;
   };
   bool incDecHostEngagedAlertsCounter(const char *key, bool increase);
+  bool hostStatusAlerted(const char *host_key, const char *alert_str, bool alerted);
 
 #ifdef NTOPNG_PRO
   virtual void addIPToLRUMatches(u_int32_t client_ip, u_int16_t user_pool_id,

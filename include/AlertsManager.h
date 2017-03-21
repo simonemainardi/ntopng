@@ -105,6 +105,7 @@ class AlertsManager : protected StoreManager, protected GenericHash {
   bool isEngaged(Alert *a);
   bool setEngaged(Alert *a);
   bool setReleased(Alert *a);
+  bool setStored(Alert *a);
   int initEngaged();
 
  public:
@@ -127,6 +128,7 @@ class AlertsManager : protected StoreManager, protected GenericHash {
   u_int32_t getNumEngagedAlerts(Host *h);
 
   void incDecEngagedAlertsCounters(Alert *a, bool increase);
+  void updateStatusInformation(Alert *a, bool status_alerted);
 
 
 #ifdef NOTUSED

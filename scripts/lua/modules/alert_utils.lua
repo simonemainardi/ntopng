@@ -2039,3 +2039,70 @@ $('#myModal').on('hidden.bs.modal', function () {
       end
 
 end
+
+function processAnomalousHosts()
+   -- interface must be already selected
+   local alerted_hosts = interface.getLocalHostsInfo(true --[[ host details --]],
+						     nil, nil, nil, nil,
+						     nil, nil, nil, nil,
+						     nil, nil,
+						     nil, nil,
+						     true --[[ only anomalous hosts --]])
+
+
+   alerted_hosts = alerted_hosts["hosts"]
+
+   for _,h in pairs(alerted_hosts) do
+      local hostkey = hostinfo2hostkey({host=h["ip"], vlan=h["vlan"]})
+
+      -- SCAN TARGERT alerts
+      if h.status.scan_target.status == true and h.status.scan_target.alert == false then
+	 -- Scan target alert that should be engaged
+
+	 local ha = HostAlert(hostkey)
+	 ha:typeScanTarget()
+	 ha:engage()
+	 interface.alert(tostring(ha))
+
+      elseif h.status.scan_target.status == false and h.status.scan_target.alert == true then
+	 -- Scan target that is no longer engaged and so it should be released
+
+	 local ha = HostAlert(hostkey)
+	 ha:typeScanTarget()
+	 ha:release()
+	 interface.alert(tostring(ha))
+      end
+
+      -- SCANNER alerts
+      if h.status.scanner.status == true and h.status.scanner.alert == false then
+	 -- Scanner alert that should be engaged
+
+	 local ha = HostAlert(hostkey)
+	 ha:typeScanner()
+	 ha:engage()
+	 interface.alert(tostring(ha))
+
+      elseif h.status.scanner.status == false and h.status.scanner.alert == true then
+	 -- Scanner that is no longer engaged and so it should be released
+
+	 local ha = HostAlert(hostkey)
+	 ha:typeScanner()
+	 ha:release()
+	 interface.alert(tostring(ha))
+      end
+
+      -- SYN floods
+      if h.status.syn_flooder.status == true and h.status.syn_flooder.alert == false then
+	 local ha = HostAlert(hostkey)
+	 ha:typeSynFlooder()
+	 interface.alert(tostring(ha))
+      end
+
+      if h.status.syn_flood_target.status == true and h.status.syn_flood_target.alert == false then
+	 local ha = HostAlert(hostkey)
+	 ha:typeSynFloodTarget()
+	 interface.alert(tostring(ha))
+      end
+
+   end
+end

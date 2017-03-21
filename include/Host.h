@@ -36,6 +36,7 @@ class Host : public GenericHost {
   u_int32_t asn;
   char *symbolic_name, *country, *city, *asname, os[16], trafficCategory[12], *info;
   FrequentStringItems *top_sites;
+  StatusInformation *status_information;
   char * old_sites;
   bool blacklisted_host, drop_all_host_traffic, dump_host_traffic, dhcpUpdated;
   u_int32_t host_quota_mb;
@@ -119,6 +120,9 @@ class Host : public GenericHost {
   inline IpAddress* get_ip()                   { return(&ip);              }
   void set_mac(char *m);
   inline bool isBlacklisted()                  { return(blacklisted_host); }
+  inline bool isAnomalous()                    { if(status_information) return status_information->isAnomalous(); return false; }
+  inline void setStatusAlerted(const char *ak)  { if(status_information) status_information->setStatusAlerted(ak);   };
+  inline void clearStatusAlerted(const char *ak){ if(status_information) status_information->clearStatusAlerted(ak); };
   inline u_int8_t*  get_mac()                  { return(mac ? mac->get_mac() : NULL);      }
   inline Mac* getMac()                         { return(mac);              }
   inline char* get_os()                        { return(os);               }

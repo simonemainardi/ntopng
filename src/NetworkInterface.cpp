@@ -2378,7 +2378,7 @@ struct flowHostRetriever {
   Host *host;
   u_int8_t *mac;
   char *manufacturer;
-  bool skipSpecialMacs, hostMacsOnly;
+  bool skipSpecialMacs, hostMacsOnly, anomalousOnly;
   char *country;
   int ndpi_proto;
   sortField sorter;
@@ -2523,6 +2523,7 @@ static bool host_search_walker(GenericHashEntry *he, void *user_data) {
      ((r->asnFilter != (u_int32_t)-1)     && (r->asnFilter       != h->get_asn()))              ||
      ((r->networkFilter != -2) && (r->networkFilter != h->get_local_network_id())) ||
      (r->hostMacsOnly  && h->getMac() && h->getMac()->isSpecialMac())       ||
+     (r->anomalousOnly && !h->isAnomalous())                                ||
      (r->mac           && (! h->getMac()->equal(r->vlan_id, r->mac)))       ||
      ((r->poolFilter != (u_int16_t)-1)    && (r->poolFilter    != h->get_host_pool()))        ||
      (r->country  && strlen(r->country)  && (!h->get_country() || strcmp(h->get_country(), r->country))) ||
@@ -2978,7 +2979,7 @@ int NetworkInterface::sortHosts(struct flowHostRetriever *retriever,
 				u_int16_t vlan_id, char *osFilter,
 				u_int32_t asnFilter, int16_t networkFilter,
 				u_int16_t pool_filter, u_int8_t ipver_filter,
-				bool hostMacsOnly, char *sortColumn) {
+				bool hostMacsOnly, char *sortColumn, bool anomalousOnly) {
   u_int32_t maxHits;
   u_int8_t macAddr[6];
   int (*sorter)(const void *_a, const void *_b);
@@ -2986,7 +2987,7 @@ int NetworkInterface::sortHosts(struct flowHostRetriever *retriever,
   if(retriever == NULL)
     return -1;
 
-  if(! isPacketInterface()) hostMacsOnly = false;
+  if(!isPacketInterface()) hostMacsOnly = false;
 
   maxHits = getHostsHashSize();
   if((maxHits > CONST_MAX_NUM_HITS) || (maxHits == 0))
@@ -3008,6 +3009,7 @@ int NetworkInterface::sortHosts(struct flowHostRetriever *retriever,
   retriever->poolFilter = pool_filter;
   retriever->ipVersionFilter = ipver_filter;
   retriever->maxNumEntries = maxHits, retriever->hostMacsOnly = hostMacsOnly;
+  retriever->anomalousOnly = anomalousOnly;
   retriever->elems = (struct flowHostRetrieveList*)calloc(sizeof(struct flowHostRetrieveList), retriever->maxNumEntries);
 
   if(retriever->elems == NULL) {
@@ -3102,7 +3104,8 @@ int NetworkInterface::getActiveHostsList(lua_State* vm, AddressTree *allowed_hos
 					 u_int32_t asnFilter, int16_t networkFilter,
 					 u_int16_t pool_filter, u_int8_t ipver_filter,
 					 char *sortColumn, u_int32_t maxHits,
-					 u_int32_t toSkip, bool a2zSortOrder) {
+					 u_int32_t toSkip, bool a2zSortOrder,
+					 bool anomalousOnly) {
   struct flowHostRetriever retriever;
 
   disablePurge(false);
@@ -3110,7 +3113,7 @@ int NetworkInterface::getActiveHostsList(lua_State* vm, AddressTree *allowed_hos
   if(sortHosts(&retriever, allowed_hosts, host_details, location,
 	       countryFilter, mac_filter, vlan_id, osFilter,
 	       asnFilter, networkFilter, pool_filter, ipver_filter,
-	       true, sortColumn) < 0) {
+	       true, sortColumn, anomalousOnly) < 0) {
     enablePurge(false);
     return -1;
   }
@@ -3165,7 +3168,8 @@ int NetworkInterface::getActiveHostsList(lua_State* vm, AddressTree *allowed_hos
 					   u_int16_t vlan_id, char *osFilter,
 					   u_int32_t asnFilter, int16_t networkFilter,
 					   u_int16_t pool_filter, u_int8_t ipver_filter,
-					   bool local_macs, char *groupColumn) {
+					   bool local_macs, char *groupColumn,
+					   bool anomalousOnly) {
   struct flowHostRetriever retriever;
   Grouper *gper;
 
@@ -3175,7 +3179,7 @@ int NetworkInterface::getActiveHostsList(lua_State* vm, AddressTree *allowed_hos
   if(sortHosts(&retriever, allowed_hosts, host_details, location,
 	       countryFilter, NULL /* Mac */, vlan_id,
 	       osFilter, asnFilter, networkFilter, pool_filter, ipver_filter,
-	       local_macs, groupColumn) < 0 ) {
+	       local_macs, groupColumn, anomalousOnly) < 0 ) {
     enablePurge(false);
     return -1;
   }
@@ -4151,10 +4155,42 @@ bool NetworkInterface::incDecHostEngagedAlertsCounter(const char *key, bool incr
 
   if(h) {
     ret = true;
-    if(increase)
-      h->incNumAlerts();
-    else
-      h->decNumAlerts();
+    if(h->isLocalHost()) {
+      if(increase)
+	h->incNumAlerts();
+      else
+	h->decNumAlerts();
+    }
+  }
+
+  enablePurge(false);
+
+  return ret;
+}
+
+/* **************************************** */
+
+bool NetworkInterface::hostStatusAlerted(const char *host_key, const char *alert_str, bool alerted) {
+  bool ret = false;
+  char host_buf[64];
+  char *host_ip;
+  u_int16_t vlan_id = 0;
+  Host *h;
+
+  Utils::getHostVlanInfo(host_key, &host_ip, &vlan_id, host_buf, sizeof(host_buf));
+
+  disablePurge(false); /* Must disable as it is not called from the data path */
+
+  h = getHost(host_ip, vlan_id);
+
+  if(h) {
+    ret = true;
+    if(h->isLocalHost()) {
+      if(alerted)
+	h->setStatusAlerted(alert_str);
+      else
+	h->clearStatusAlerted(alert_str);
+    }
   }
 
   enablePurge(false);
