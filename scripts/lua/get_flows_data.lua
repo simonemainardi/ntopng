@@ -473,9 +473,9 @@ for _key, _value in pairsByValues(vals, funct) do
    print (", \"column_proto_l4\" : \"")
 
    if(interface.isPacketInterface()) then
-      if(value["flow.status"] ~= 0) then
+      if(value["flow.status"] ~= "normal") then
 	 print("<i class='fa fa-warning fa-lg' style='color: orange;'"
-		  .." title='"..string.gsub(getFlowStatus(value["flow.status"]), "<[^>]*>([^<]+)<.*", "%1")
+		  .." title='"..flowStatusToMessage(value["flow.status"])
 		  .."'></i> ")
       end
    end

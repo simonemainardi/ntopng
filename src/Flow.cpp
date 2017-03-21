@@ -259,7 +259,7 @@ void Flow::dumpFlowAlert() {
   if((!isFlowAlerted()) && (status != status_normal)) {
     char buf[128], *f = print(buf, sizeof(buf));
     AlertType aType;
-    const char *msg = Utils::flowStatus2str(status, &aType);
+    const char *msg = Flow::flowStatus2Str(status);
     bool do_dump = true;
 
     ntop->getTrace()->traceEvent(TRACE_INFO, "[%s] %s", msg, f);
@@ -1457,7 +1457,8 @@ void Flow::lua(lua_State* vm, AddressTree * ptree,
   }
 
   lua_push_bool_table_entry(vm, "flow.idle", isIdleFlow());
-  lua_push_int_table_entry(vm, "flow.status", getFlowStatus());
+  lua_push_str_table_entry(vm, "flow.status", (char*)Flow::flowStatus2Str(getFlowStatus()));
+  lua_push_bool_table_entry(vm, "flow.alerted", isFlowAlerted());
 
   // this is used to dynamicall update entries in the GUI
   lua_push_int_table_entry(vm, "ntopng.key", key()); // Key
@@ -1487,6 +1488,44 @@ u_int32_t Flow::key(Host *_cli, u_int16_t _cli_port,
 
   return(k);
 }
+
+/* *************************************** */
+
+const char* Flow::flowStatus2Str(FlowStatus s) {
+  switch(s) {
+  case status_normal:
+    return("normal");
+    break;
+  case status_slow_tcp_connection:
+    return("slow_tcp_connection");
+    break;
+  case status_slow_application_header:
+    return("slow_app_header");
+    break;
+  case status_slow_data_exchange:
+    return("slow_data");
+    break;
+  case status_low_goodput:
+    return("low_goodput");
+    break;
+  case status_suspicious_tcp_syn_probing:
+    return("syn_probing");
+    break;
+  case status_tcp_connection_issues:
+    return("tcp_connection_issues");
+    break;
+  case status_suspicious_tcp_probing:
+    return("tcp_probing");
+  case status_flow_when_interface_alerted:
+    return("alerted_interface");
+  case status_tcp_connection_refused:
+    return("tcp_connection_refused");
+  default:
+    return("unknown_status");
+    break;
+  }
+}
+
 
 /* *************************************** */
 

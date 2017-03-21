@@ -13,6 +13,23 @@ package.path = dirs.installdir .. "/scripts/lua/modules/?.lua;" .. package.path
 require "lua_utils"
 require "alert_utils"
 require "slack_utils"
+local callback_utils = require "callback_utils"
 
 housekeepingAlertsMakeRoom()
 sendSlackMessages()
+
+local ifnames = interface.getIfNames()
+
+callback_utils.foreachInterface(ifnames, false, function(ifname, ifstats)
+  local res = interface.getFlowsInfo(nil, {suspiciousFlowsOnly=true})
+
+  if res.flows then
+    for _, flow in pairs(res.flows) do
+      if not flow["flow.alerted"] then
+        -- TODO
+        --~ tprint(flow["ntopng.key"].." :: "..flow["flow.status"])
+        interface.setFlowAlerted(flow["ntopng.key"])
+      end
+    end
+  end
+end)

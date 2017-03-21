@@ -391,7 +391,7 @@ else
    end
 
    if interface.isPacketInterface() then
-      print("<tr><th width=30%>Flow Status</th><td colspan=2>"..getFlowStatus(flow["flow.status"]).."</td></tr>\n")
+      print("<tr><th width=30%>Flow Status</th><td colspan=2>"..formatFlowStatus(flow["flow.status"]).."</td></tr>\n")
    end
 
    if((flow.client_process == nil) and (flow.server_process == nil)) then

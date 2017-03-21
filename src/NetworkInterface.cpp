@@ -2456,6 +2456,11 @@ static bool flow_search_walker(GenericHashEntry *h, void *user_data) {
         || ((server_policy == location_remote_only) && (f->get_srv_host()->isLocalHost()))))
 	return(false); /* false = keep on walking */
 
+  if(retriever->pag
+       && retriever->pag->suspiciousFlowsOnly()
+       && f->getFlowStatus() == status_normal)
+  return(false); /* false = keep on walking */
+
     retriever->elems[retriever->actNumEntries].flow = f;
 
     if(f->match(retriever->allowed_hosts)) {

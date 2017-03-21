@@ -436,6 +436,27 @@ static int ntop_get_ndpi_interface_flows_status(lua_State* vm) {
 
 /* ****************************************** */
 
+static int ntop_get_ndpi_interface_set_flow_alerted(lua_State* vm) {
+  u_int32_t flowkey;
+  NetworkInterface *ntop_interface = getCurrentInterface(vm);
+  AddressTree *ptree = get_allowed_nets(vm);
+
+  ntop->getTrace()->traceEvent(TRACE_DEBUG, "%s() called", __FUNCTION__);
+
+  if(ntop_lua_check(vm, __FUNCTION__, 1, LUA_TNUMBER)) return(CONST_LUA_ERROR);
+  flowkey = lua_tonumber(vm, 1);
+
+  if(ntop_interface) {
+    Flow *flow = ntop_interface->findFlowByKey(flowkey, ptree);
+    if (flow != NULL)
+      flow->setFlowAlerted();
+  }
+
+  return(CONST_LUA_OK);
+}
+
+/* ****************************************** */
+
 /**
  * @brief Get the ndpi protocol name of protocol id of network interface.
  * @details Get the ntop interface global variable of lua. Once do that, get the protocol id of lua stack and return into lua stack "Host-to-Host Contact" if protocol id is equal to host family id; the protocol name or null otherwise.
@@ -5360,6 +5381,7 @@ static const luaL_Reg ntop_interface_reg[] = {
   { "getnDPIProtoCategory",   ntop_get_ndpi_protocol_category },
   { "getnDPIFlowsCount",      ntop_get_ndpi_interface_flows_count },
   { "getFlowsStatus",         ntop_get_ndpi_interface_flows_status },
+  { "setFlowAlerted",         ntop_get_ndpi_interface_set_flow_alerted },
   { "getnDPIProtoBreed",      ntop_get_ndpi_protocol_breed },
   { "getnDPIProtocols",       ntop_get_ndpi_protocols },
   { "getnDPICategories",      ntop_get_ndpi_categories },

@@ -130,6 +130,8 @@ void Paginator::readOptions(lua_State *L, int index) {
 	  a2z_sort_order = lua_toboolean(L, -1) ? true : false;
 	else if(!strcmp(key, "detailedResults"))
 	  detailed_results = lua_toboolean(L, -1) ? true : false;
+	else if(!strcmp(key, "suspiciousFlowsOnly"))
+	  suspicious_flows_only = lua_toboolean(L, -1) ? true : false;
 	//else
 	  //ntop->getTrace()->traceEvent(TRACE_ERROR, "Invalid bool type for option %s", key);
 	break;

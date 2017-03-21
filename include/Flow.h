@@ -204,7 +204,6 @@ class Flow : public GenericHashEntry {
     return(1000 /* msec */
 	   * (now - (cli2srv_direction ? cli2srvStats.pktTime.lastTime.tv_sec : srv2cliStats.pktTime.lastTime.tv_sec)));
   }
-  FlowStatus getFlowStatus();
   char* printTCPflags(u_int8_t flags, char *buf, u_int buf_len);
   inline bool isProtoSSL(u_int16_t p ) { return((ndpi_get_lower_proto(ndpiDetectedProtocol) == p) ? true : false); }
 #ifdef NTOPNG_PRO
@@ -394,6 +393,8 @@ class Flow : public GenericHashEntry {
   inline bool      isEstablished()                  { return state == flow_state_established; }
   inline bool      isFlowAlerted()                  { return(flow_alerted);                   }
   inline void      setFlowAlerted()                 { flow_alerted = true;                    }
+  FlowStatus getFlowStatus();
+  static const char* flowStatus2Str(FlowStatus s);
 
   void setActivityFilter(ActivityFilterID fid, const activity_filter_config * config);
 

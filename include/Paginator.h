@@ -28,6 +28,7 @@ class Paginator {
  protected:
   u_int16_t max_hits, to_skip;
   bool a2z_sort_order, detailed_results;
+  bool suspicious_flows_only;
   char *sort_column, *country_filter, *host_filter;
   int l7proto_filter;
   u_int16_t port_filter;
@@ -77,6 +78,10 @@ class Paginator {
 
   inline bool serverMode(LocationPolicy *f) const {
     if(server_mode) { (*f) = server_mode; return true; } return false;
+  }
+
+  inline bool suspiciousFlowsOnly() const {
+      return suspicious_flows_only;
   }
 };
 
