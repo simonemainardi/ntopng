@@ -15,10 +15,11 @@ if tonumber(_GET["row_id"]) ~= nil then
    local res = interface.queryAlertsRaw("select alert_json", "where rowid=".._GET["row_id"])
 
    if (res ~= nil) and (res[1] ~= nil) then
-      res = res[1].alert_json
+      print(res[1].alert_json)
+   else
+      print("{}")
    end
 
-   print(res)
    return
 end
 

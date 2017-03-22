@@ -1842,7 +1842,17 @@ print[[
 	       textAlign: 'left', width: '30%'
 	    }
 	 }
-      ]
+      ], tableCallback: function() {
+            datatableForEachRow("#]] print(t["div-id"]) print[[", function(row_id) {
+               $("form", this).submit(function() {
+               // add "status" parameter to the form
+               var get_params = paramsExtend(]] print(tableToJsObject(getTabParameters(url_params, nil))) print[[, {status:getCurrentStatus()});
+               $(this).attr("action", "?" + $.param(get_params));
+
+               return true;
+            });
+         });
+      }
    });
    });
    ]]
