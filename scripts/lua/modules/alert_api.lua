@@ -53,15 +53,15 @@ end
 function Alert:typeScanner(sent_flows)
    self.header.alert_type = 'scanner'
    self.header.alert_severity = 'warning'
-   self.alert_id = 'scan' -- possibly add other information for the key
    self.alert_detail = {flows=sent_flows}
+   self.header.alert_id = 'scan' -- possibly add other information for the key
 end
 
 function Alert:typeScanTarget(received_flows)
    self.header.alert_type = 'scan_target'
    self.header.alert_severity = 'warning'
-   self.alert_id = 'scan' -- possibly add other information for the key
    self.alert_detail = {flows=received_flows}
+   self.header.alert_id = 'scan' -- possibly add other information for the key
 end
 
 function Alert:typeSynFlooder(attack_counter)

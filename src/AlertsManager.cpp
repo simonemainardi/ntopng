@@ -265,10 +265,12 @@ int AlertsManager::releaseAlert(Alert *alert) {
 
     snprintf(query, sizeof(query),
 	     "UPDATE %s SET is_engaged = ?, alert_tstamp_end = ? WHERE "
-	     "alert_id = ? and is_engaged = ? "
+	     "alert_type = ? and is_engaged = ? "
+	     "and alert_id %s "
 	     "and source_type %s and source_value %s "
 	     "and target_type %s and target_value %s ; ",
 	     ALERTS_MANAGER_TABLE,
+	     alert->getHeaderField("alert_id") ? "= ?" : "is null",
 	     alert->getHeaderField("source_type") ? "= ?" : "is null",
 	     alert->getHeaderField("source_value") ? "= ?" : "is null",
 	     alert->getHeaderField("target_type") ? "= ?" : "is null",
@@ -284,8 +286,10 @@ int AlertsManager::releaseAlert(Alert *alert) {
 
     if(sqlite3_bind_int64(stmt, stmt_number++, 0 /* 0 == NOT ENGAGED */)
        || sqlite3_bind_int64(stmt, stmt_number++, static_cast<long int>(alert->getTimestamp()))
-       || sqlite3_bind_text(stmt,  stmt_number++, alert->getHeaderField("alert_id"), -1, SQLITE_STATIC)
+       || sqlite3_bind_text(stmt,  stmt_number++, alert->getHeaderField("alert_type"), -1, SQLITE_STATIC)
        || sqlite3_bind_int64(stmt, stmt_number++, 1 /* 1 == was ENGAGED */)
+       || (alert->getHeaderField("alert_id")
+	   && sqlite3_bind_text(stmt,  stmt_number++, alert->getHeaderField("alert_id"), -1, SQLITE_STATIC))
        || (alert->getHeaderField("source_type")
 	   && sqlite3_bind_text(stmt,  stmt_number++, alert->getHeaderField("source_type"), -1, SQLITE_STATIC))
        || (alert->getHeaderField("source_value")
