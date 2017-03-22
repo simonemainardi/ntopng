@@ -369,6 +369,10 @@ function alertTypeLabel(k)
 
    -- Split the underscores and capitalize first word letters
    local parts = string.split(k, "_")
+   if parts == nil then
+      parts = {k}
+   end
+
    for i,part in pairs(parts) do
       parts[i] = firstToUpper(part)
    end

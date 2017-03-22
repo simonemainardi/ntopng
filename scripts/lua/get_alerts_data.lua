@@ -9,11 +9,13 @@ require "lua_utils"
 require "alert_utils"
 local json = require "dkjson"
 
+interface.select(ifname)
+
 sendHTTPHeader('text/html; charset=iso-8859-1')
 
 if tonumber(_GET["row_id"]) ~= nil then
    local res = interface.queryAlertsRaw("select alert_json", "where rowid=".._GET["row_id"])
-
+   tprint(res)
    if (res ~= nil) and (res[1] ~= nil) then
       print(res[1].alert_json)
    else
@@ -30,7 +32,7 @@ if status == "engaged" then
    engaged = true
 end
 
-interface.select(ifname)
+
 
 if(tonumber(_GET["currentPage"]) == nil) then _GET["currentPage"] = 1 end
 if(tonumber(_GET["perPage"]) == nil) then _GET["perPage"] = getDefaultTableSize() end
