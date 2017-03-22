@@ -15,7 +15,7 @@ sendHTTPHeader('text/html; charset=iso-8859-1')
 
 if tonumber(_GET["row_id"]) ~= nil then
    local res = interface.queryAlertsRaw("select alert_json", "where rowid=".._GET["row_id"])
-   tprint(res)
+
    if (res ~= nil) and (res[1] ~= nil) then
       print(res[1].alert_json)
    else
