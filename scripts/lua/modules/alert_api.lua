@@ -34,9 +34,7 @@ function Alert:release(alert_id)
 end
 
 function Alert:addFlow(f)
-   if f.dump() then
-      self.flow_detail = f.dump()
-   end
+   self.flow_detail = f
 end
 
 function Alert:typeThresholdCross(time_granularity, metric, actual_value, operator, threshold)
@@ -81,6 +79,21 @@ function Alert:typeAboveQuota()
    self.header.alert_severity = 'warning'
 end
 
+function Alert:typeSynProbing()
+   self.header.alert_type = 'syn_probing'
+   self.header.alert_severity = 'warning'
+end
+
+function Alert:typeTcpProbing()
+   self.header.alert_type = 'tcp_probing'
+   self.header.alert_severity = 'warning'
+end
+
+function Alert:typeTcpConnectionRefused()
+   self.header.alert_type = 'tcp_connection_refused'
+   self.header.alert_severity = 'warning'
+end
+
 function Alert:typeMalwareSiteAccess(host_server_name)
    self.header.alert_type = 'malware_access'
    self.header.alert_severity = 'error'
@@ -99,20 +112,37 @@ end)
 
 --------------------------------------------------------------------------------
 
-HostAlert = class(Alert, function(c, hostkey)
-		     local hostinfo = interface.getHostInfo(hostkey, nil, false, false)
-		     local src = hostkey
+HostAlert = class(Alert, function(c, hostkey, target_hostkey)
+		     local src_type
+		     local target_type
+		     local src
+		     local target
 
-		     if not isEmptyString(src) then
-			src = src:gsub('@0', '')
+		     if not isEmptyString(hostkey) then -- Source is not nil
+			src_type = 'host'
+			src = hostkey:gsub('@0', '')
+
+			local hostinfo = interface.getHostInfo(hostkey, nil, false, false)
+
+			-- JSON for the source detail
+			if hostinfo ~= nil and type(hostinfo) == "table" then
+			   c.source_detail = hostinfo
+			end
 		     end
 
-		     -- JSON for the source detail
-		     if hostinfo ~= nil and type(hostinfo) == "table" then
-			c.source_detail = hostinfo
+		     if not isEmptyString(target_hostkey) then -- Target is not nil
+			target_type = 'host'
+			target = target_hostkey:gsub('@0', '')
+
+			local hostinfo = interface.getHostInfo(target_hostkey, nil, false, false)
+
+			-- JSON for the target detail
+			if hostinfo ~= nil and type(hostinfo) == "table" then
+			   c.target_detail = hostinfo
+			end
 		     end
 
-		     Alert.init(c, 'host', src, nil, nil)
+		     Alert.init(c, src_type, src, target_type, target)
 end)
 
 --------------------------------------------------------------------------------
@@ -123,22 +153,6 @@ NetworkAlert = class(Alert, function(c, network_name)
 end)
 
 --------------------------------------------------------------------------------
-
-FlowAlert = class(Alert, function(c, flow)
-		     local cli_key = hostinfo2hostkey(flow, "cli")
-		     local srv_key = hostinfo2hostkey(flow, "srv")
-		     Alert.init(c, 'host', source_key, 'host', dst_key)
-end)
-
-function FlowAlert:typeBadFlow(flowStatus)
-   self.header.alert_type = flowStatus
-   self.header.alert_severity = 'error'
-end
-
-function FlowAlert:typeAlertedInterface()
-   self.header.alert_type = "alerted_interface"
-   self.header.alert_severity = 'error'
-end
 
 --[[
 

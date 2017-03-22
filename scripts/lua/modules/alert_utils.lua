@@ -29,38 +29,42 @@ function processAnomalousFlows()
    local probing_alerts_enabled = ntop.getCache("ntopng.prefs.probing_alerts") == "1"
    local interface_alerts_enabled = ntop.getCache("ntopng.alerts.dump_alerts_when_iface_is_alerted") == "1"
 
-   local res = interface.getFlowsInfo(nil, {suspiciousFlowsOnly=true})
+   local res = interface.getFlowsInfo(nil, {suspiciousFlowsOnly=true, detailedResults=true})
 
    if res.flows then
       for _, flow in pairs(res.flows) do
          if not flow["flow.alerted"] then
             local status = flow["flow.status"]
             local alert = nil
+	    local cli_key = hostinfo2hostkey(flow, "cli")
+	    local srv_key = hostinfo2hostkey(flow, "srv")
 
             -- Probing alerts
+	    
             if ((status == "slow_tcp_connection") or
                 (status == "slow_app_header") or
                 (status == "slow_data") or
                 (status == "low_goodput") or
                 (status == "tcp_connection_issues")) then
                -- Don't log them for the time being otherwise we'll have too many flows
-            elseif ((status == "syn_probing") or
-                (status == "tcp_probing") or
-                (status == "tcp_connection_refused")) then
-               if probing_alerts_enabled then
-                  alert = FlowAlert(flow)
-                  alert:typeBadFlow(status)
+	    elseif probing_alerts_enabled then
+	       if (status == "syn_probing") then
+		  alert = HostAlert(cli_key --[[ cli assumed to be the alert source ]],
+				    srv_key --[[ srv assumed to be the alert target ]])
+		  alert:typeSynProbing()
+	       elseif (status == "tcp_probing") then
+		  alert = HostAlert(cli_key --[[ cli assumed to be the alert source ]],
+				    srv_key --[[ srv assumed to be the alert target ]])
+		  alert:typeTcpProbing()
+	       elseif (status == "tcp_connection_refused") then
+		  alert = HostAlert(cli_key --[[ cli assumed to be the alert source ]],
+				    srv_key --[[ srv assumed to be the alert target ]])
+		  alert:typeTcpConnectionRefused()
                end
-            elseif (status == "alerted_interface") then
-               if interface_alerts_enabled then
-                  alert = FlowAlert(flow)
-                  alert:typeAlertedInterface()
-               end
-            else
-               io.write("Unknown flow status: "..status.."\n")
-            end
+	    end
 
             if alert ~= nil then
+	       alert:addFlow(flow)
                interface.alert(tostring(alert))
                interface.setFlowAlerted(flow["ntopng.key"])
             end
