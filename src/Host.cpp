@@ -137,8 +137,6 @@ void Host::initialize(u_int8_t _mac[6], u_int16_t _vlanId, bool init_all) {
   max_num_syn_sec_threshold = CONST_MAX_NUM_SYN_PER_SECOND;
   max_num_active_flows = CONST_MAX_NUM_HOST_ACTIVE_FLOWS, good_low_flow_detected = false;
   networkStats = NULL, local_network_id = -1, nextResolveAttempt = 0, info = NULL;
-  syn_flood_attacker_alert = new AlertCounter(max_num_syn_sec_threshold, CONST_MAX_THRESHOLD_CROSS_DURATION);
-  syn_flood_victim_alert = new AlertCounter(max_num_syn_sec_threshold, CONST_MAX_THRESHOLD_CROSS_DURATION);
   os[0] = '\0', trafficCategory[0] = '\0', blacklisted_host = false;
   num_uses = 0, symbolic_name = NULL, vlan_id = _vlanId % MAX_NUM_VLAN,
     total_num_flows_as_client = total_num_flows_as_server = 0,
@@ -258,6 +256,9 @@ void Host::initialize(u_int8_t _mac[6], u_int16_t _vlanId, bool init_all) {
     loadAlertPrefs();
     readAlertPrefs();
   }
+
+  syn_flood_attacker_alert = new AlertCounter(max_num_syn_sec_threshold, CONST_MAX_THRESHOLD_CROSS_DURATION);
+  syn_flood_victim_alert = new AlertCounter(max_num_syn_sec_threshold, CONST_MAX_THRESHOLD_CROSS_DURATION);
   
   if(!host_serial) computeHostSerial();
   updateHostPool();
@@ -545,6 +546,9 @@ void Host::lua(lua_State* vm, AddressTree *ptree,
 
     if(isLocalHost() && status_information)
       status_information->lua(vm);
+
+    syn_flood_attacker_alert->lua(vm, "synAttackAlertCounter");
+    syn_flood_victim_alert->lua(vm, "synVictimAlertCounter");
   }
 
   if(localHost) {

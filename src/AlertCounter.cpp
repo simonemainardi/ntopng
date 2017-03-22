@@ -44,6 +44,19 @@ void AlertCounter::init() {
 
 /* *************************************** */
 
+void AlertCounter::lua(lua_State* vm, const char * key) {
+  lua_newtable(vm);
+
+  lua_push_int_table_entry(vm, "currentHits", getCurrentHits());
+  lua_push_int_table_entry(vm, "overThresholdDuration", getOverThresholdDuration());
+
+  lua_pushstring(vm, key);
+  lua_insert(vm, -2);
+  lua_settable(vm, -3);
+}
+
+/* *************************************** */
+
 bool AlertCounter::incHits(time_t when) {
   if(time_last_hit < (when-1))
     init(); /* Only consecutive alerts matter */

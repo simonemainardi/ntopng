@@ -146,9 +146,13 @@ function formatAlertMessage(alert_json)
 
          return msg
       elseif alert_type == "scanner" then
-         return source_msg .. " is a possible scanner (" .. alert.source_detail["active_flows.as_client"] .. " flows as client)"
+         return source_msg .. " is a possible scanner ("..alert_detail.flows.." flows as client)"
       elseif alert_type == "scan_target" then
-         return source_msg .. " is possibly under scan attack (" .. alert.source_detail["active_flows.as_server"] .. " flows as server)"
+         return source_msg .. " is possibly under scan attack ("..alert_detail.flows.." flows as server)"
+      elseif alert_type == "syn_flooder" then
+         return source_msg .. " is a SYN flooder ("..alert_detail.counter.currentHits.." SYNs sent in the last "..alert_detail.counter.overThresholdDuration.." sec)"
+      elseif alert_type == "syn_flood_target" then
+         return source_msg .. " is under SYN flood attack ("..alert_detail.counter.currentHits.." SYNs received in the last "..alert_detail.counter.overThresholdDuration.." sec)"
       end
    end
 
@@ -2066,7 +2070,7 @@ function processAnomalousHosts()
 	 -- Scan target alert that should be engaged
 
 	 local ha = HostAlert(hostkey)
-	 ha:typeScanTarget()
+	 ha:typeScanTarget(h["active_flows.as_server"])
 	 ha:engage()
 	 interface.alert(tostring(ha))
 
@@ -2074,7 +2078,7 @@ function processAnomalousHosts()
 	 -- Scan target that is no longer engaged and so it should be released
 
 	 local ha = HostAlert(hostkey)
-	 ha:typeScanTarget()
+	 ha:typeScanTarget(h["active_flows.as_server"])
 	 ha:release()
 	 interface.alert(tostring(ha))
       end
@@ -2084,7 +2088,7 @@ function processAnomalousHosts()
 	 -- Scanner alert that should be engaged
 
 	 local ha = HostAlert(hostkey)
-	 ha:typeScanner()
+	 ha:typeScanner(h["active_flows.as_client"])
 	 ha:engage()
 	 interface.alert(tostring(ha))
 
@@ -2092,7 +2096,7 @@ function processAnomalousHosts()
 	 -- Scanner that is no longer engaged and so it should be released
 
 	 local ha = HostAlert(hostkey)
-	 ha:typeScanner()
+	 ha:typeScanner(h["active_flows.as_client"])
 	 ha:release()
 	 interface.alert(tostring(ha))
       end
@@ -2100,13 +2104,13 @@ function processAnomalousHosts()
       -- SYN floods
       if h.status.syn_flooder.status == true and h.status.syn_flooder.alert == false then
 	 local ha = HostAlert(hostkey)
-	 ha:typeSynFlooder()
+	 ha:typeSynFlooder(h.synAttackAlertCounter)
 	 interface.alert(tostring(ha))
       end
 
       if h.status.syn_flood_target.status == true and h.status.syn_flood_target.alert == false then
 	 local ha = HostAlert(hostkey)
-	 ha:typeSynFloodTarget()
+	 ha:typeSynFloodTarget(h.synVictimAlertCounter)
 	 interface.alert(tostring(ha))
       end
 

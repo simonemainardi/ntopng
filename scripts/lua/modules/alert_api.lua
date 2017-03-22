@@ -50,26 +50,30 @@ function Alert:typeThresholdCross(time_granularity, metric, actual_value, operat
    if actual_value ~= nil then self.alert_detail.actual_value = actual_value end
 end
 
-function Alert:typeScanner()
+function Alert:typeScanner(sent_flows)
    self.header.alert_type = 'scanner'
    self.header.alert_severity = 'warning'
    self.alert_id = 'scan' -- possibly add other information for the key
+   self.alert_detail = {flows=sent_flows}
 end
 
-function Alert:typeScanTarget()
+function Alert:typeScanTarget(received_flows)
    self.header.alert_type = 'scan_target'
    self.header.alert_severity = 'warning'
    self.alert_id = 'scan' -- possibly add other information for the key
+   self.alert_detail = {flows=received_flows}
 end
 
-function Alert:typeSynFlooder()
+function Alert:typeSynFlooder(attack_counter)
    self.header.alert_type = 'syn_flooder'
    self.header.alert_severity = 'warning'
+   self.alert_detail = {counter=attack_counter}
 end
 
-function Alert:typeSynFloodTarget()
+function Alert:typeSynFloodTarget(victim_counter)
    self.header.alert_type = 'syn_flood_target'
    self.header.alert_severity = 'warning'
+   self.alert_detail = {counter=victim_counter}
 end
 
 function Alert:typeAboveQuota()
