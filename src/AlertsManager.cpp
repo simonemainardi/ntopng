@@ -1078,7 +1078,6 @@ int AlertsManager::getNumAlerts(const char *sql_where_clause) {
 
 int AlertsManager::queryAlertsRaw(lua_State *vm, const char *selection,
 				  const char *clauses) {
-  const char *table_name = "alerts";
 
   if(!ntop->getPrefs()->are_alerts_disabled()) {
     alertsRetriever ar;
@@ -1089,7 +1088,7 @@ int AlertsManager::queryAlertsRaw(lua_State *vm, const char *selection,
     snprintf(query, sizeof(query),
 	     "%s FROM %s %s ",
 	     selection ? selection : "SELECT *",
-	     table_name,
+	     ALERTS_MANAGER_TABLE,
 	     clauses ? clauses : (char*)"");
 
     // ntop->getTrace()->traceEvent(TRACE_NORMAL, "Going to execute: %s", query);

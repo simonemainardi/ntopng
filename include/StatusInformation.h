@@ -48,6 +48,8 @@ class StatusInformation {
   inline bool getStatus(HostStatus host_status)   { return status & (1 << host_status); };
   inline void setStatus(HostStatus host_status)   { status |= 1 << host_status;         };
   inline void clearStatus(HostStatus host_status) { status &= ~(1 << host_status);      };
+  json_object *getJSONObject();
+  void deserialize(json_object *o);
 
   /* Alerts for statuses are set from Lua */
   inline bool getStatusAlerted(HostStatus host_status) { return alert & (1 << host_status); };

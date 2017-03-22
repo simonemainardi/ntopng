@@ -145,6 +145,10 @@ function formatAlertMessage(alert_json)
          end
 
          return msg
+      elseif alert_type == "scanner" then
+         return source_msg .. " is a possible scanner (" .. alert.source_detail["active_flows.as_client"] .. " flows as client)"
+      elseif alert_type == "scan_target" then
+         return source_msg .. " is possibly under scan attack (" .. alert.source_detail["active_flows.as_server"] .. " flows as server)"
       end
    end
 

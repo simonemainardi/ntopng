@@ -139,7 +139,6 @@ void Host::initialize(u_int8_t _mac[6], u_int16_t _vlanId, bool init_all) {
   networkStats = NULL, local_network_id = -1, nextResolveAttempt = 0, info = NULL;
   syn_flood_attacker_alert = new AlertCounter(max_num_syn_sec_threshold, CONST_MAX_THRESHOLD_CROSS_DURATION);
   syn_flood_victim_alert = new AlertCounter(max_num_syn_sec_threshold, CONST_MAX_THRESHOLD_CROSS_DURATION);
-  flow_flood_attacker_alert = flow_flood_victim_alert = false;
   os[0] = '\0', trafficCategory[0] = '\0', blacklisted_host = false;
   num_uses = 0, symbolic_name = NULL, vlan_id = _vlanId % MAX_NUM_VLAN,
     total_num_flows_as_client = total_num_flows_as_server = 0,
@@ -805,11 +804,10 @@ json_object* Host::getJSONObject() {
   json_object_object_add(my_object, "ip", ip.getJSONObject());
   if(deviceIfIdx)         json_object_object_add(my_object, "device_if_idx", json_object_new_int(deviceIfIdx));
   if(deviceIP)            json_object_object_add(my_object, "device_ip",     json_object_new_int(deviceIP));
+  if(status_information)  json_object_object_add(my_object, "status_info",   status_information->getJSONObject());
   json_object_object_add(my_object, "localHost", json_object_new_boolean(localHost));
   json_object_object_add(my_object, "systemHost", json_object_new_boolean(systemHost));
   json_object_object_add(my_object, "is_blacklisted", json_object_new_boolean(blacklisted_host));
-  json_object_object_add(my_object, "flow_flood_attacker_alert", json_object_new_boolean(flow_flood_attacker_alert));
-  json_object_object_add(my_object, "flow_flood_victim_alert",   json_object_new_boolean(flow_flood_victim_alert));
   json_object_object_add(my_object, "tcp_sent", tcp_sent.getJSONObject());
   json_object_object_add(my_object, "tcp_rcvd", tcp_rcvd.getJSONObject());
   json_object_object_add(my_object, "udp_sent", udp_sent.getJSONObject());
@@ -922,6 +920,7 @@ bool Host::deserialize(char *json_str, char *key) {
   if(json_object_object_get_ex(o, "vlan_id", &obj))       vlan_id     = json_object_get_int(obj);
   if(json_object_object_get_ex(o, "device_if_idx", &obj)) deviceIfIdx = json_object_get_int(obj);
   if(json_object_object_get_ex(o, "device_ip", &obj))     deviceIP    = json_object_get_int(obj);
+  if(json_object_object_get_ex(o, "status_info", &obj))     status_information->deserialize(obj);
   if(json_object_object_get_ex(o, "latitude", &obj))  latitude  = (float)json_object_get_double(obj);
   if(json_object_object_get_ex(o, "longitude", &obj)) longitude = (float)json_object_get_double(obj);
   if(json_object_object_get_ex(o, "ip", &obj))  { ip.deserialize(obj); }
@@ -949,8 +948,6 @@ bool Host::deserialize(char *json_str, char *key) {
   if(json_object_object_get_ex(o, "flows.as_server", &obj))  total_num_flows_as_server = json_object_get_int(obj);
   if(user_activities) if(json_object_object_get_ex(o, "userActivities", &obj))  user_activities->deserialize(obj);
 
-  if(json_object_object_get_ex(o, "flow_flood_attacker_alert", &obj)) flow_flood_attacker_alert = json_object_get_boolean(obj);
-  if(json_object_object_get_ex(o, "flow_flood_victim_alert", &obj))   flow_flood_victim_alert   = json_object_get_boolean(obj);
   if(json_object_object_get_ex(o, "is_blacklisted", &obj)) blacklisted_host     = json_object_get_boolean(obj);
 
   if(json_object_object_get_ex(o, "sent", &obj))  sent.deserialize(obj);
@@ -1019,8 +1016,6 @@ void Host::updateSynFlags(time_t when, u_int8_t flags, Flow *f, bool syn_sent) {
   if(!isLocalHost() || !triggerAlerts()) return;
 
   if(counter->incHits(when)) {
-    char ip_buf[48], flow_buf[256], msg[512], *h;
-    const char *error_msg;
 
 #if 0
     /*
@@ -1029,41 +1024,10 @@ void Host::updateSynFlags(time_t when, u_int8_t flags, Flow *f, bool syn_sent) {
     if(ntop->getUptime() < 10 /* sec */) return;
 #endif
 
-    h = ip.print(ip_buf, sizeof(ip_buf));
-
-    if(syn_sent) {
+    if(syn_sent)
       host_status = host_status_syn_flooder;
-
-      error_msg = "Host <A HREF=%s/lua/host_details.lua?host=%s&ifname=%s>%s</A> is a SYN flooder [%u SYNs sent in the last %u sec] %s";
-      snprintf(msg, sizeof(msg),
-	       error_msg, ntop->getPrefs()->get_http_prefix(),
-	       h, iface->get_name(), h,
-	       counter->getCurrentHits(),
-	       counter->getOverThresholdDuration(),
-	       f->print(flow_buf, sizeof(flow_buf)));
-    } else {
+    else
       host_status = host_status_syn_flood_target;
-
-      char attacker_buf[64], *attacker_str;
-      Host *attacker = f->get_srv_host();
-      IpAddress *aip = attacker->get_ip();
-      char aip_buf[48], *aip_ptr;
-
-
-      attacker_str = attacker->get_ip()->print(attacker_buf, sizeof(attacker_buf));
-      aip_ptr = aip->print(aip_buf, sizeof(aip_buf));
-      error_msg = "Host <A HREF=%s/lua/host_details.lua?host=%s&ifname=%s>%s</A> is under SYN flood attack by host %s [%u SYNs received in the last %u sec] %s";
-      snprintf(msg, sizeof(msg),
-	       error_msg, ntop->getPrefs()->get_http_prefix(),
-	       h, iface->get_name(), attacker_str, aip_ptr,
-	       counter->getCurrentHits(),
-	       counter->getOverThresholdDuration(),
-	       f->print(flow_buf, sizeof(flow_buf)));
-    }
-
-    ntop->getTrace()->traceEvent(TRACE_INFO, "SYN Flood: %s", msg);
-
-    /* the f->get_srv_host() is just a guess */
 
     status_information->setStatus(host_status);
   }
@@ -1075,39 +1039,15 @@ void Host::incNumFlows(bool as_client) {
   if(as_client) {
     total_num_flows_as_client++, num_active_flows_as_client++;
 
-    if(num_active_flows_as_client >= max_num_active_flows && localHost && triggerAlerts() && !flow_flood_attacker_alert) {
-      const char* error_msg = "Host <A HREF=%s/lua/host_details.lua?host=%s&ifname=%s>%s</A> is a possible scanner [%u active flows exceeded]";
-      char ip_buf[48], *h, msg[512];
-
-      h = ip.print(ip_buf, sizeof(ip_buf));
-
-      snprintf(msg, sizeof(msg),
-	       error_msg, ntop->getPrefs()->get_http_prefix(),
-	       h, iface->get_name(), h, max_num_active_flows);
-
-      ntop->getTrace()->traceEvent(TRACE_INFO, "Begin scan attack: %s", msg);
-
+    if(num_active_flows_as_client >= max_num_active_flows && isLocalHost()
+        && triggerAlerts() && !status_information->getStatus(host_status_scanner))
       status_information->setStatus(host_status_scanner);
-      flow_flood_attacker_alert = true;
-    }
   } else {
     total_num_flows_as_server++, num_active_flows_as_server++;
 
-    if(num_active_flows_as_server >= max_num_active_flows && localHost && triggerAlerts() && !flow_flood_victim_alert) {
-      const char* error_msg = "Host <A HREF=%s/lua/host_details.lua?host=%s&ifname=%s>%s</A> is possibly under scan attack [%u active flows exceeded]";
-      char ip_buf[48], *h, msg[512];
-
-      h = ip.print(ip_buf, sizeof(ip_buf));
-
-      snprintf(msg, sizeof(msg),
-	       error_msg, ntop->getPrefs()->get_http_prefix(),
-	       h, iface->get_name(), h, max_num_active_flows);
-
-      ntop->getTrace()->traceEvent(TRACE_INFO, "Begin scan attack: %s", msg);
-
+    if(num_active_flows_as_server >= max_num_active_flows && isLocalHost()
+        && triggerAlerts() && !status_information->getStatus(host_status_scan_target))
       status_information->setStatus(host_status_scan_target);
-      flow_flood_victim_alert = true;
-    }
   }
 }
 
@@ -1118,43 +1058,19 @@ void Host::decNumFlows(bool as_client) {
     if(num_active_flows_as_client) {
       num_active_flows_as_client--;
 
-      if(num_active_flows_as_client <= max_num_active_flows && localHost && triggerAlerts() && flow_flood_attacker_alert) {
-	const char* error_msg = "Host <A HREF=%s/lua/host_details.lua?host=%s&ifname=%s>%s</A> is no longer a possible scanner [less than %u active flows]";
-	char ip_buf[48], *h, msg[512];
-
-	h = ip.print(ip_buf, sizeof(ip_buf));
-
-	snprintf(msg, sizeof(msg),
-		 error_msg, ntop->getPrefs()->get_http_prefix(),
-		 h, iface->get_name(), h, max_num_active_flows);
-
-	ntop->getTrace()->traceEvent(TRACE_INFO, "End scan attack: %s", msg);
-
-	status_information->clearStatus(host_status_scanner);
-	flow_flood_attacker_alert = false;
-      }
+      if(num_active_flows_as_client <= max_num_active_flows && isLocalHost()
+          && triggerAlerts() && status_information->getStatus(host_status_scanner))
+        status_information->clearStatus(host_status_scanner);
     } else
       ntop->getTrace()->traceEvent(TRACE_WARNING, "Internal error: invalid counter value");
   } else {
     if(num_active_flows_as_server) {
       num_active_flows_as_server--;
 
-      if(num_active_flows_as_server <= max_num_active_flows && localHost && triggerAlerts() && flow_flood_victim_alert) {
-	const char* error_msg = "Host <A HREF=%s/lua/host_details.lua?host=%s&ifname=%s>%s</A> is no longer under scan attack [less than %u active flows]";
-	char ip_buf[48], *h, msg[512];
+      if(num_active_flows_as_server <= max_num_active_flows && isLocalHost()
+          && triggerAlerts() && status_information->getStatus(host_status_scan_target))
 
-	h = ip.print(ip_buf, sizeof(ip_buf));
-
-	snprintf(msg, sizeof(msg),
-		 error_msg, ntop->getPrefs()->get_http_prefix(),
-		 h, iface->get_name(), h, max_num_active_flows);
-
-	ntop->getTrace()->traceEvent(TRACE_INFO, "End scan attack: %s", msg); // TODO: remove
-
-	status_information->clearStatus(host_status_scan_target);
-
-	flow_flood_victim_alert = false;
-      }
+        status_information->clearStatus(host_status_scan_target);
     } else
       ntop->getTrace()->traceEvent(TRACE_WARNING, "Internal error: invalid counter value");
   }

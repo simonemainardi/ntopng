@@ -31,6 +31,30 @@ StatusInformation::StatusInformation() {
 
 /* *************************************** */
 
+json_object* StatusInformation::getJSONObject() {
+  json_object *my_object;
+
+  my_object = json_object_new_object();
+
+  json_object_object_add(my_object, "status", json_object_new_int(status));
+  json_object_object_add(my_object, "alert", json_object_new_int(alert));
+
+  return my_object;
+}
+
+/* *************************************** */
+
+void StatusInformation::deserialize(json_object *o) {
+  json_object *obj;
+
+  if(!o) return;
+
+  if(json_object_object_get_ex(o, "status", &obj))  status = json_object_get_int(obj);
+  if(json_object_object_get_ex(o, "alert", &obj))   alert = json_object_get_int(obj);
+}
+
+/* *************************************** */
+
 void StatusInformation::setStatusAlerted(const char *k) {
   status_mapping_t *s = NULL;
 

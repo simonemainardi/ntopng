@@ -50,8 +50,10 @@ bool Alert::parse_header(json_object *obj) {
       alert_id = strndup(json_object_get_string(content), MAX_ALERT_HEADER_FIELD_LEN),
 	hash_key += Utils::string_hash(alert_id);
 
-    if(json_object_object_get_ex(header, "alert_type", &content))
+    if(json_object_object_get_ex(header, "alert_type", &content)) {
       alert_type = strndup(json_object_get_string(content), MAX_ALERT_HEADER_FIELD_LEN);
+      hash_key += Utils::string_hash(alert_type);
+    }
 
     if(json_object_object_get_ex(header, "alert_severity", &content))
       alert_severity = strndup(json_object_get_string(content), MAX_ALERT_HEADER_FIELD_LEN);
@@ -206,7 +208,7 @@ const char *Alert::getHeaderField(const char *field_name) const {
 bool Alert::equal(const Alert *alert) const {
   bool null1, null2;
   /* Two engaged alerts are considered equal if they match on the fields below */
-  const char *equality_fields[] = {"source_type", "source_value", "target_type", "target_value", "alert_id", NULL};
+  const char *equality_fields[] = {"source_type", "source_value", "target_type", "target_value", "alert_id", "alert_type", NULL};
   const char *field = equality_fields[0];
   int i = 0;
 
