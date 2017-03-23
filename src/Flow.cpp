@@ -83,7 +83,7 @@ Flow::Flow(NetworkInterface *_iface,
   memset(&categorization.category, 0, sizeof(categorization.category));
   bytes_thpt_trend = trend_unknown, pkts_thpt_trend = trend_unknown;
   //bytes_rate = new TimeSeries<float>(4096);
-  protocol_processed = false, blacklist_alarm_emitted = false;
+  protocol_processed = false;
 
   synTime.tv_sec = synTime.tv_usec = 0,
     ackTime.tv_sec = ackTime.tv_usec = 0,
@@ -220,7 +220,6 @@ Flow::~Flow() {
     if(srv_host) srv_host->decLowGoodputFlows(false);
   }
 
-  checkBlacklistedFlow();
   update_hosts_stats(&tv, true); /* dumpFlow is done inside */
 
   iface->luaEvalFlow(this, callback_flow_delete);
@@ -249,50 +248,6 @@ Flow::~Flow() {
   if(bt_hash)          free(bt_hash);
 
   freeDPIMemory();
-}
-
-/* *************************************** */
-
-void Flow::checkBlacklistedFlow() {
-  if(!blacklist_alarm_emitted) {
-    if(cli_host
-       && srv_host
-       && (cli_host->isBlacklisted()
-	   || srv_host->isBlacklisted())) {
-      char c_buf[64], s_buf[64], *c, *s, fbuf[256], alert_msg[1024];
-
-      c = cli_host->get_ip()->print(c_buf, sizeof(c_buf));
-      if(c && cli_host->get_vlan_id())
-	sprintf(&c[strlen(c)], "@%i", cli_host->get_vlan_id());
-
-      s = srv_host->get_ip()->print(s_buf, sizeof(s_buf));
-      if(s && srv_host->get_vlan_id())
-	sprintf(&s[strlen(s)], "@%i", srv_host->get_vlan_id());
-
-      snprintf(alert_msg, sizeof(alert_msg),
-	       "%s <A HREF='%s/lua/host_details.lua?host=%s&ifname=%s&page=alerts'>%s</A> contacted %s host "
-	       "<A HREF='%s/lua/host_details.lua?host=%s&ifname=%s&page=alerts'>%s</A> [%s]",
-	       cli_host->isBlacklisted() ? "blacklisted" : "",
-	       ntop->getPrefs()->get_http_prefix(),
-	       c, iface->get_name(),
-	       cli_host->get_name() ? cli_host->get_name() : c,
-	       srv_host->isBlacklisted() ? "blacklisted" : "",
-	       ntop->getPrefs()->get_http_prefix(),
-	       s, iface->get_name(),
-	       srv_host->get_name() ? srv_host->get_name() : s,
-	       print(fbuf, sizeof(fbuf)));
-
-      /* force the vlan in the alert source and target */
-      if(!strstr(c, "@")) sprintf(&c[strlen(c)], "@%i", cli_host->get_vlan_id());
-      if(!strstr(s, "@")) sprintf(&s[strlen(s)], "@%i", srv_host->get_vlan_id());
-
-      /* TODO migrate alert */
-      //~ iface->getAlertsManager()->storeFlowAlert(this, alert_dangerous_host,
-						//~ alert_level_error, alert_msg);
-    }
-
-    blacklist_alarm_emitted = true;
-  }
 }
 
 /* *************************************** */
@@ -1039,8 +994,6 @@ void Flow::update_hosts_stats(struct timeval *tv, bool inDeleteMethod) {
       last_db_dump.last_dump = last_seen;
   }
 
-  checkBlacklistedFlow();
-
   /*
     No need to call the method below as
     the delete callback will be called in a moment
@@ -1451,6 +1404,8 @@ const char* Flow::flowStatus2Str(FlowStatus s) {
     return("alerted_interface");
   case status_tcp_connection_refused:
     return("tcp_connection_refused");
+  case status_blacklisted_host:
+    return("malware_access");
   default:
     return("unknown_status");
     break;
@@ -2579,6 +2534,12 @@ FlowStatus Flow::getFlowStatus() {
   u_int32_t threshold;
 
   /* All flows */
+  if (cli_host
+      && srv_host
+      && (cli_host->isLocalHost() || srv_host->isLocalHost())
+      && (cli_host->isBlacklisted() || srv_host->isBlacklisted()))
+    return status_blacklisted_host;
+
   threshold = cli2srv_packets / CONST_TCP_CHECK_ISSUES_RATIO;
   if((tcp_stats_s2d.pktRetr + tcp_stats_s2d.pktOOO + tcp_stats_s2d.pktLost) > threshold)
     return status_tcp_connection_issues;

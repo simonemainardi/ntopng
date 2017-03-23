@@ -94,10 +94,9 @@ function Alert:typeTcpConnectionRefused()
    self.header.alert_severity = 'warning'
 end
 
-function Alert:typeMalwareSiteAccess(host_server_name)
+function Alert:typeMalwareSiteAccess()
    self.header.alert_type = 'malware_access'
    self.header.alert_severity = 'error'
-   self.alert_detail = {host_server_name=host_server_name}
 end
 
 function Alert:__tostring()

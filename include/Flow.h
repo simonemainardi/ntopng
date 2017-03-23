@@ -77,7 +77,7 @@ class Flow : public GenericHashEntry {
   FlowState state;
   u_int8_t protocol, src2dst_tcp_flags, dst2src_tcp_flags;
   struct ndpi_flow_struct *ndpiFlow;
-  bool detection_completed, protocol_processed, blacklist_alarm_emitted,
+  bool detection_completed, protocol_processed,
     cli2srv_direction, twh_over, dissect_next_http_packet, passVerdict,
     check_tor, l7_protocol_guessed, flow_alerted,
     good_low_flow_detected, good_ssl_hs;
@@ -192,7 +192,6 @@ class Flow : public GenericHashEntry {
   char* intoaV4(unsigned int addr, char* buf, u_short bufLen);
   void processLua(lua_State* vm, ProcessInfo *proc, bool client);
   void processJson(bool is_src, json_object *my_object, ProcessInfo *proc);
-  void checkBlacklistedFlow();
   void allocDPIMemory();
   bool checkTor(char *hostname);
   void checkFlowCategory();

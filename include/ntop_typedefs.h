@@ -175,6 +175,7 @@ typedef enum {
   status_suspicious_tcp_probing /* 7 */,
   status_flow_when_interface_alerted /* 8 */,
   status_tcp_connection_refused /* 9 */,  
+  status_blacklisted_host /* 10 */,
 } FlowStatus;
 
 typedef enum {

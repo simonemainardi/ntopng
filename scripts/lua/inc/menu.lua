@@ -124,7 +124,7 @@ if ntop.getPrefs().are_alerts_enabled == true then
         </a>
       </li>
 ]]
-   if ntop.isEnterprise() then
+   if ntop.isEnterprise() and false --[[ TODO fix these pages and enable ]] then
       print[[
       <li>
         <a href="]]

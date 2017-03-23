@@ -60,6 +60,10 @@ function processAnomalousFlows()
 		  alert = HostAlert(cli_key --[[ cli assumed to be the alert source ]],
 				    srv_key --[[ srv assumed to be the alert target ]])
 		  alert:typeTcpConnectionRefused()
+	       elseif (status == "malware_access") then
+		  alert = HostAlert(cli_key --[[ cli assumed to be the alert source ]],
+				    srv_key --[[ srv assumed to be the alert target ]])
+		  alert:typeMalwareSiteAccess()
                end
 	    end
 
@@ -83,8 +87,11 @@ function formatEntity(entity_type, entity_value, join_html)
    if entity_type == "host" then
       -- Possibly remove vlan 0
       local hostkey = hostinfo2hostkey(hostkey2hostinfo(entity_value))
-      
-      entity = ntop.getResolvedAddress(hostkey)
+      local resolved = ntop.getResolvedAddress(hostkey)
+
+      if not isEmptyString(resolved) then
+         entity = resolved
+      end
 
       url = url.."host_details.lua?host="..hostkey
    elseif entity_type == "network" then
@@ -130,15 +137,44 @@ function formatAlertMessage(alert_json)
       local target_msg = formatEntityType(alert.header.target_type) .. " " .. formatEntity(alert.header.target_type, alert.header.target_value, true)
 
       if ((alert.header.source_type == "host") and (alert.header.target_type == "host")) then
-         if alert_type == "alerted_interface" then
-            return "Interface was alerted"
-         else
-            -- Is this a flow alert?
-            local message = flowStatusToMessage(alert_type)
-            if message ~= alert_type then
-               -- Yes it is
-               return source_msg.." > "..target_msg
+         local prefix = ""
+         local suffix = ""
+         local cli_msg = ""
+         local srv_msg = ""
+         local flow_detail = alert.flow_detail
+
+         if flow_detail ~= nil then
+            -- Note: client and server can be different from source and target
+            cli_msg = formatEntity("host", hostinfo2hostkey(flow_detail, "cli"), true)
+            srv_msg = formatEntity("host", hostinfo2hostkey(flow_detail, "srv"), true)
+
+            suffix = suffix.."["..flow_detail["cli2srv.packets"].."/"..flow_detail["srv2cli.packets"].." pkts]"
+            suffix = suffix.." ["..flow_detail["cli2srv.bytes"].."/"..flow_detail["srv2cli.bytes"].." bytes]"
+
+            suffix = suffix.." [proto: ".."<a href='"..ntop.getHttpPrefix().."/lua/flows_stats.lua?application="..flow_detail["proto.ndpi"].."'>"..flow_detail["proto.ndpi"].."</a>]"
+
+            if flow_detail["proto.l4"] == "TCP" then
+               if flow_detail["cli2srv.out_of_order"] + flow_detail["srv2cli.out_of_order"] > 0 then
+                  suffix = suffix.." [OOO="..flow_detail["cli2srv.out_of_order"].."/"..flow_detail["srv2cli.out_of_order"]
+               end
+               if flow_detail["cli2srv.lost"] + flow_detail["srv2cli.lost"] > 0 then
+                  suffix = suffix.." [Lost="..flow_detail["cli2srv.lost"].."/"..flow_detail["srv2cli.lost"]
+               end
+               if flow_detail["cli2srv.retransmissions"] + flow_detail["srv2cli.retransmissions"] > 0 then
+                  suffix = suffix.." [Retr="..flow_detail["cli2srv.retransmissions"].."/"..flow_detail["srv2cli.retransmissions"]
+               end
             end
+         end
+
+         -- Special cases for flows
+         if alert_type == "tcp_probing" then
+            return prefix.." "..suffix
+         elseif alert_type == "malware_access" then
+            return cli_msg .. " contacted malware " .. srv_msg .. " " .. suffix
+         elseif alert_type == "syn_probing" then
+            return prefix.." "..suffix
+         else
+            return prefix.." "..suffix
          end
       end
 
@@ -1639,7 +1675,9 @@ function drawAlertTables(num_past_alerts, num_engaged_alerts, get_params, hide_e
 
 function checkAlertActionsPanel() {
    /* check if this tab is handled by this script */
-   if(getCurrentStatus() == "")
+   var status = getCurrentStatus();
+
+   if((status == "engaged") || (status == ""))
       $("#alertsActionsPanel").css("display", "none");
    else
       $("#alertsActionsPanel").css("display", "");
