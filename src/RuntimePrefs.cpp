@@ -29,6 +29,8 @@ RuntimePrefs::RuntimePrefs() {
 
   prefscache = NULL;
   prefscache_refreshed = false;
+  if(!(rwlock = new RwLock()))
+    throw 1;
 
   housekeeping_frequency = HOUSEKEEPING_FREQUENCY;
   local_host_cache_duration = LOCAL_HOSTS_CACHE_DURATION;
@@ -73,7 +75,6 @@ RuntimePrefs::RuntimePrefs() {
   global_secondary_dns_ip = inet_addr(DEFAULT_GLOBAL_DNS);
   enable_captive_portal = false;
   redirection_url = strdup(DEFAULT_REDIRECTION_URL);
-  redirection_url_shadow = NULL;
 
   hostMask = no_host_mask;
 
@@ -131,7 +132,13 @@ void RuntimePrefs::addToCache(const char *key, prefsptr_t value_ptr, void *value
   prefscache_t *m = (prefscache_t*)calloc(1, sizeof(prefscache_t));
 
   if(m) {
-    m->key = key, m->value_ptr = value_ptr, m->value = value;
+    m->key = strdup(key), m->value_ptr = value_ptr;
+
+    if(value_ptr == str_ptr)
+      m->value = strdup(*((char**)m->value));
+    else
+      m->value = value;
+
     if(m->key) HASH_ADD_STR(prefscache, key, m); else free(m);
   }
 }
@@ -142,7 +149,9 @@ int RuntimePrefs::hashGet(char *key, char *rsp, u_int rsp_len) {
   int ret = -1;
   prefscache_t *m = NULL;
 
+  rwlock->lock(__FILE__, __LINE__, true /* rdlock */);
   HASH_FIND_STR(prefscache, key, m);
+  rwlock->unlock(__FILE__, __LINE__);
 
   if(m) {
     switch(m->value_ptr) {
@@ -171,6 +180,8 @@ int RuntimePrefs::hashGet(char *key, char *rsp, u_int rsp_len) {
     }
   }
 
+
+
 #ifdef DEBUG
   if(ret > 0)
     ntop->getTrace()->traceEvent(TRACE_NORMAL, "Found RuntimePrefs cache entry [key: %s][val: %s]", key, rsp);
@@ -189,14 +200,14 @@ RuntimePrefs::~RuntimePrefs() {
   writeDump();
 
   HASH_ITER(hh, prefscache, cur, tmp) {
+    if(cur->value_ptr && cur->value)
+      free(cur->value);
+    free(cur->key);
     HASH_DEL(prefscache, cur);  /* delete; users advances to next */
     free(cur);                  /* optional- if you want to free  */
   }
 
-  if(redirection_url_shadow)
-    free(redirection_url_shadow);
-  if(redirection_url)
-    free(redirection_url);
+  delete rwlock;
 }
 
 /* ******************************************* */
@@ -207,6 +218,8 @@ json_object* RuntimePrefs::getJSONObject() {
   prefscache_t *m, *tmp;
 
   if((my_object = json_object_new_object()) == NULL) return(NULL);
+
+  rwlock->lock(__FILE__, __LINE__, true /* rdlock */);
 
   HASH_ITER(hh, prefscache, m, tmp) {
     switch(m->value_ptr) {
@@ -237,6 +250,8 @@ json_object* RuntimePrefs::getJSONObject() {
     }
 
   }
+
+  rwlock->unlock(__FILE__, __LINE__);
 
   return my_object;
 }
@@ -298,6 +313,8 @@ bool RuntimePrefs::deserialize(char *json_str) {
       default:
 	break;
       }
+    } else {
+      /* TODO: add  */
     }
   }
 
@@ -413,7 +430,9 @@ int RuntimePrefs::refresh(const char *pref_name, const char *pref_value) {
   if(!pref_name || !pref_value)
     return -1;
 
+  rwlock->lock(__FILE__, __LINE__, true /* rdlock */);
   HASH_FIND_STR(prefscache, pref_name, m);
+  rwlock->unlock(__FILE__, __LINE__);
 
   if(m) {
 
@@ -442,6 +461,13 @@ int RuntimePrefs::refresh(const char *pref_name, const char *pref_value) {
     default:
       break;
     }
+
+
+  } else if(!strncmp(pref_name, "ntopng.prefs.", strlen("ntopng.prefs"))) {
+    ntop->getTrace()->traceEvent(TRACE_NORMAL, "Adding [key: %s]", pref_name);
+    rwlock->lock(__FILE__, __LINE__, false /* wrlock */);
+    addToCache(pref_name, str_ptr, (void*)pref_value);
+    rwlock->unlock(__FILE__, __LINE__);
   } else
     return -1;
 
