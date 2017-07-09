@@ -25,7 +25,10 @@
 #include "ntop_includes.h"
 
 typedef enum {
-  str_ptr = 0,
+  /* Dynamically allocated string */
+  str = 0,
+  /* Pointers to class members */
+  str_ptr,
   u_int32_t_ptr,
   int32_t_ptr,
   bool_ptr,

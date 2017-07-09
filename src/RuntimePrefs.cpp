@@ -48,7 +48,7 @@ RuntimePrefs::RuntimePrefs() {
   other_rrd_1h_days = OTHER_RRD_1H_DAYS;
   other_rrd_1d_days = OTHER_RRD_1D_DAYS;
 
-  
+
   enable_top_talkers = CONST_DEFAULT_TOP_TALKERS_ENABLED;
   enable_idle_local_hosts_cache   = CONST_DEFAULT_IS_IDLE_LOCAL_HOSTS_CACHE_ENABLED;
   enable_active_local_hosts_cache = CONST_DEFAULT_IS_ACTIVE_LOCAL_HOSTS_CACHE_ENABLED;
@@ -134,8 +134,8 @@ void RuntimePrefs::addToCache(const char *key, prefsptr_t value_ptr, void *value
   if(m) {
     m->key = strdup(key), m->value_ptr = value_ptr;
 
-    if(value_ptr == str_ptr)
-      m->value = strdup(*((char**)m->value));
+    if(value_ptr == str)
+      m->value = strdup((char*)value);
     else
       m->value = value;
 
@@ -155,8 +155,12 @@ int RuntimePrefs::hashGet(char *key, char *rsp, u_int rsp_len) {
 
   if(m) {
     switch(m->value_ptr) {
-    case str_ptr:
+    case str:
       ret = snprintf(rsp, rsp_len, "%s", (char*)m->value);
+      break;
+
+    case str_ptr:
+      ret = snprintf(rsp, rsp_len, "%s", *((char**)m->value));
       break;
 
     case u_int32_t_ptr:
@@ -200,9 +204,14 @@ RuntimePrefs::~RuntimePrefs() {
   writeDump();
 
   HASH_ITER(hh, prefscache, cur, tmp) {
-    if(cur->value_ptr && cur->value)
+    if(cur->value_ptr == str)
       free(cur->value);
-    free(cur->key);
+    else if(cur->value_ptr == str_ptr)
+      free(*((char**)cur->value));
+
+      if(cur->key)
+      free(cur->key);
+
     HASH_DEL(prefscache, cur);  /* delete; users advances to next */
     free(cur);                  /* optional- if you want to free  */
   }
@@ -223,8 +232,14 @@ json_object* RuntimePrefs::getJSONObject() {
 
   HASH_ITER(hh, prefscache, m, tmp) {
     switch(m->value_ptr) {
-    case str_ptr:
+    case str:
       c = (char*)m->value;
+      if(c)
+	json_object_object_add(my_object, m->key, json_object_new_string(c));
+      break;
+
+    case str_ptr:
+      c = *((char**)m->value);
       if(c)
 	json_object_object_add(my_object, m->key, json_object_new_string(c));
       break;
@@ -290,6 +305,18 @@ bool RuntimePrefs::deserialize(char *json_str) {
 
       switch(m->value_ptr) {
 
+      case str:
+	if(m->value)
+	  free(m->value);
+	m->value = strdup(json_object_get_string(val));
+	break;
+
+      case str_ptr:
+	if(*((char**)m->value))
+	  free(*((char**)m->value));
+	*((char**)m->value) = strdup(json_object_get_string(val));
+	break;
+
       case u_int32_t_ptr:
 	*((u_int32_t*)m->value) = json_object_get_int64(val);
 	break;
@@ -306,15 +333,11 @@ bool RuntimePrefs::deserialize(char *json_str) {
 	*((HostMask*)m->value) = (HostMask)json_object_get_int(val);
 	break;
 
-      case str_ptr:
-	/* TODO */
-	break;
-
       default:
 	break;
       }
     } else {
-      /* TODO: add  */
+      addToCache(key, str, (void*)json_object_get_string(val));
     }
   }
 
@@ -438,6 +461,18 @@ int RuntimePrefs::refresh(const char *pref_name, const char *pref_value) {
 
     switch(m->value_ptr) {
 
+    case str:
+      if(m->value)
+	free(m->value);
+      m->value = strdup(pref_value);
+      break;
+
+    case str_ptr:
+      if(*((char**)m->value))
+	free(*((char**)m->value));
+      *((char**)m->value) = strdup(pref_value);
+      break;
+
     case u_int32_t_ptr:
       *((u_int32_t*)m->value) = atoi(pref_value);
       break;
@@ -454,10 +489,6 @@ int RuntimePrefs::refresh(const char *pref_name, const char *pref_value) {
       *((HostMask*)m->value) = (HostMask)atoi(pref_value);
       break;
 
-    case str_ptr:
-      /* TODO */
-      break;
-
     default:
       break;
     }
@@ -466,7 +497,7 @@ int RuntimePrefs::refresh(const char *pref_name, const char *pref_value) {
   } else if(!strncmp(pref_name, "ntopng.prefs.", strlen("ntopng.prefs"))) {
     ntop->getTrace()->traceEvent(TRACE_NORMAL, "Adding [key: %s]", pref_name);
     rwlock->lock(__FILE__, __LINE__, false /* wrlock */);
-    addToCache(pref_name, str_ptr, (void*)pref_value);
+    addToCache(pref_name, str, (void*)pref_value);
     rwlock->unlock(__FILE__, __LINE__);
   } else
     return -1;
