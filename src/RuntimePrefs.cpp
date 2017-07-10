@@ -24,10 +24,7 @@
 /* ******************************************* */
 
 RuntimePrefs::RuntimePrefs() {
-  snprintf(path, sizeof(path), "%s/%s",
-	   ntop->get_working_dir(), CONST_DEFAULT_PREFS_FILE);
-  snprintf(tmp_path, sizeof(path), "%s/%s.temp",
-	   ntop->get_working_dir(), CONST_DEFAULT_PREFS_FILE);
+  path[0] = tmp_path[0] = '\0';
 
   prefscache = NULL;
   prefscache_refreshed = false;
@@ -49,7 +46,6 @@ RuntimePrefs::RuntimePrefs() {
   other_rrd_1min_days = OTHER_RRD_1MIN_DAYS;
   other_rrd_1h_days = OTHER_RRD_1H_DAYS;
   other_rrd_1d_days = OTHER_RRD_1D_DAYS;
-
 
   enable_top_talkers = CONST_DEFAULT_TOP_TALKERS_ENABLED;
   enable_idle_local_hosts_cache   = CONST_DEFAULT_IS_IDLE_LOCAL_HOSTS_CACHE_ENABLED;
@@ -365,6 +361,15 @@ bool RuntimePrefs::deserialize(char *json_str) {
   }
 
   return true;
+}
+
+/* *************************************** */
+
+void RuntimePrefs::setDumpPath(const char *_path) {
+  snprintf(path, sizeof(path), "%s/%s",
+	   _path, CONST_DEFAULT_PREFS_FILE);
+  snprintf(tmp_path, sizeof(tmp_path), "%s/%s.temp",
+	   _path, CONST_DEFAULT_PREFS_FILE);
 }
 
 /* *************************************** */

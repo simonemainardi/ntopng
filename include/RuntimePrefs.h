@@ -98,6 +98,7 @@ class RuntimePrefs {
 
   virtual void lua(lua_State* vm);
 
+  virtual void setDumpPath(const char *_path);
   json_object* getJSONObject();
   char *serialize();
   bool deserialize(char *json_str);
