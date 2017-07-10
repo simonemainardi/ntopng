@@ -26,6 +26,8 @@
 RuntimePrefs::RuntimePrefs() {
   snprintf(path, sizeof(path), "%s/%s",
 	   ntop->get_working_dir(), CONST_DEFAULT_PREFS_FILE);
+  snprintf(tmp_path, sizeof(path), "%s/%s.temp",
+	   ntop->get_working_dir(), CONST_DEFAULT_PREFS_FILE);
 
   prefscache = NULL;
   prefscache_refreshed = false;
@@ -370,19 +372,13 @@ bool RuntimePrefs::deserialize(char *json_str) {
 bool RuntimePrefs::writeDump() {
   bool ret = true;
   char *rsp = serialize();
+  size_t tmp_w = 0, w = 0;
 
   if(rsp) {
-    FILE *fd = fopen(path, "wb");
+    if((tmp_w = Utils::file_write(tmp_path, rsp, strlen(rsp))))
+      if((w = Utils::file_write(path, rsp, strlen(rsp))) == tmp_w)
+	unlink(tmp_path), prefscache_refreshed = false;
 
-    if(fd == NULL) {
-      ntop->getTrace()->traceEvent(TRACE_WARNING, "Unable to serialize runtime preferences %s", path);
-      ret = false;
-    } else {
-      fwrite(rsp, strlen(rsp), 1, fd);
-      fclose(fd);
-
-      prefscache_refreshed = false;
-    }
     free(rsp);
   }
 
@@ -392,31 +388,26 @@ bool RuntimePrefs::writeDump() {
 /* *************************************** */
 
 bool RuntimePrefs::readDump() {
-  bool ret = true;
+  size_t tmp_r = 0, r = 0;
   char *buffer = NULL;
-  u_int64_t length;
-  FILE *f = fopen(path, "rb");
 
-  if(!f) {
-    ret = false;
-  } else {
-    fseek (f, 0, SEEK_END);
-    length = ftell(f);
-    fseek (f, 0, SEEK_SET);
-
-    buffer = (char*)malloc(length);
-    if(buffer)
-      fread(buffer, 1, length, f);
-
-    fclose(f);
-  }
-
-  if(buffer) {
-    ret = deserialize(buffer);
+  if((r = Utils::file_read(path, &buffer))
+     && deserialize(buffer)) {
     free(buffer);
+    return true;
+  }
+  
+  if(buffer) free(buffer);
+
+  if((tmp_r = Utils::file_read(tmp_path, &buffer))
+     && deserialize(buffer)) {
+    free(buffer);
+    return true;
   }
 
-  return ret;
+  if(buffer) free(buffer);
+
+  return false;
 }
 
 /* *************************************** */

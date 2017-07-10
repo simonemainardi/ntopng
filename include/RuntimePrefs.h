@@ -57,7 +57,7 @@ typedef struct {
  */
 class RuntimePrefs {
  private:
-  char path[MAX_PATH];
+  char path[MAX_PATH], tmp_path[MAX_PATH];
 
   prefscache_t *prefscache;
   bool prefscache_refreshed;
