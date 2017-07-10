@@ -74,7 +74,6 @@ RuntimePrefs::RuntimePrefs() {
   global_primary_dns_ip = inet_addr(DEFAULT_GLOBAL_DNS);
   global_secondary_dns_ip = inet_addr(DEFAULT_GLOBAL_DNS);
   enable_captive_portal = false;
-  redirection_url = strdup(DEFAULT_REDIRECTION_URL);
 
   hostMask = no_host_mask;
 
@@ -119,7 +118,7 @@ RuntimePrefs::RuntimePrefs() {
   addToCache(CONST_GLOBAL_DNS, u_int32_t_ptr, (void*)&global_primary_dns_ip);
   addToCache(CONST_SECONDARY_DNS, u_int32_t_ptr, (void*)&global_secondary_dns_ip);
   addToCache(CONST_PREFS_CAPTIVE_PORTAL, bool_ptr, (void*)&enable_captive_portal);
-  addToCache(CONST_PREFS_REDIRECTION_URL, str_ptr, (void*)&redirection_url);
+  redirection_url = addToCache(CONST_PREFS_REDIRECTION_URL, str, strdup(DEFAULT_REDIRECTION_URL));
 
   addToCache(CONST_RUNTIME_PREFS_HOSTMASK, hostmask_ptr, (void*)&hostMask);
 
@@ -128,7 +127,7 @@ RuntimePrefs::RuntimePrefs() {
 
 /* ******************************************* */
 
-void RuntimePrefs::addToCache(const char *key, prefsptr_t value_ptr, void *value) {
+prefscache_t *RuntimePrefs::addToCache(const char *key, prefsptr_t value_ptr, void *value) {
   prefscache_t *m = (prefscache_t*)calloc(1, sizeof(prefscache_t));
 
   if(m) {
@@ -139,8 +138,13 @@ void RuntimePrefs::addToCache(const char *key, prefsptr_t value_ptr, void *value
     else
       m->value = value;
 
+    if(value_ptr == str || value_ptr == str_ptr)
+      if(!(m->rwlock = new RwLock()))
+	throw 2;
     if(m->key) HASH_ADD_STR(prefscache, key, m); else free(m);
   }
+
+  return m;
 }
 
 /* ******************************************* */
@@ -156,11 +160,19 @@ int RuntimePrefs::hashGet(char *key, char *rsp, u_int rsp_len) {
   if(m) {
     switch(m->value_ptr) {
     case str:
+      m->rwlock->lock(__FILE__, __LINE__, true /* rdlock */);
+
       ret = snprintf(rsp, rsp_len, "%s", (char*)m->value);
+
+      m->rwlock->unlock(__FILE__, __LINE__);
       break;
 
     case str_ptr:
+      m->rwlock->lock(__FILE__, __LINE__, true /* rdlock */);
+
       ret = snprintf(rsp, rsp_len, "%s", *((char**)m->value));
+
+      m->rwlock->unlock(__FILE__, __LINE__);
       break;
 
     case u_int32_t_ptr:
@@ -183,8 +195,6 @@ int RuntimePrefs::hashGet(char *key, char *rsp, u_int rsp_len) {
       break;
     }
   }
-
-
 
 #ifdef DEBUG
   if(ret > 0)
@@ -209,8 +219,11 @@ RuntimePrefs::~RuntimePrefs() {
     else if(cur->value_ptr == str_ptr)
       free(*((char**)cur->value));
 
-      if(cur->key)
+    if(cur->key)
       free(cur->key);
+
+    if(cur->rwlock)
+      delete cur->rwlock;
 
     HASH_DEL(prefscache, cur);  /* delete; users advances to next */
     free(cur);                  /* optional- if you want to free  */
@@ -233,15 +246,23 @@ json_object* RuntimePrefs::getJSONObject() {
   HASH_ITER(hh, prefscache, m, tmp) {
     switch(m->value_ptr) {
     case str:
+      m->rwlock->lock(__FILE__, __LINE__, true /* rdlock */);
+
       c = (char*)m->value;
       if(c)
 	json_object_object_add(my_object, m->key, json_object_new_string(c));
+
+      m->rwlock->unlock(__FILE__, __LINE__);
       break;
 
     case str_ptr:
+      m->rwlock->lock(__FILE__, __LINE__, true /* rdlock */);
+
       c = *((char**)m->value);
       if(c)
 	json_object_object_add(my_object, m->key, json_object_new_string(c));
+
+      m->rwlock->unlock(__FILE__, __LINE__);
       break;
 
     case u_int32_t_ptr:
@@ -402,7 +423,6 @@ bool RuntimePrefs::readDump() {
 
 void RuntimePrefs::lua(lua_State* vm) {
   char buf[32];
-  char *redurl = redirection_url;
 
   lua_push_int_table_entry(vm, "housekeeping_frequency",    housekeeping_frequency);
   lua_push_int_table_entry(vm, "local_host_cache_duration", local_host_cache_duration);
@@ -441,7 +461,12 @@ void RuntimePrefs::lua(lua_State* vm) {
   lua_push_str_table_entry(vm, "secondary_dns", global_secondary_dns_ip ? Utils::intoaV4(ntohl(global_secondary_dns_ip), buf, sizeof(buf)) : (char*)"");
 
   lua_push_bool_table_entry(vm, "is_captive_portal_enabled", enable_captive_portal);
-  lua_push_str_table_entry(vm, "redirection_url", redurl);
+
+  if(redirection_url) {
+    redirection_url->rwlock->lock(__FILE__, __LINE__, true /* rdlock */);
+    lua_push_str_table_entry(vm, "redirection_url", (char*)redirection_url->value);
+    redirection_url->rwlock->unlock(__FILE__, __LINE__);
+  }
 
 }
 
@@ -462,15 +487,23 @@ int RuntimePrefs::refresh(const char *pref_name, const char *pref_value) {
     switch(m->value_ptr) {
 
     case str:
+      m->rwlock->lock(__FILE__, __LINE__, false /* wrlock */);
+
       if(m->value)
 	free(m->value);
       m->value = strdup(pref_value);
+
+      m->rwlock->unlock(__FILE__, __LINE__);
       break;
 
     case str_ptr:
+      m->rwlock->lock(__FILE__, __LINE__, false /* wrlock */);
+
       if(*((char**)m->value))
 	free(*((char**)m->value));
       *((char**)m->value) = strdup(pref_value);
+
+      m->rwlock->unlock(__FILE__, __LINE__);
       break;
 
     case u_int32_t_ptr:
@@ -495,9 +528,10 @@ int RuntimePrefs::refresh(const char *pref_name, const char *pref_value) {
 
 
   } else if(!strncmp(pref_name, "ntopng.prefs.", strlen("ntopng.prefs"))) {
-    ntop->getTrace()->traceEvent(TRACE_NORMAL, "Adding [key: %s]", pref_name);
     rwlock->lock(__FILE__, __LINE__, false /* wrlock */);
+
     addToCache(pref_name, str, (void*)pref_value);
+
     rwlock->unlock(__FILE__, __LINE__);
   } else
     return -1;

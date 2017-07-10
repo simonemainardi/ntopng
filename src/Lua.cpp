@@ -5430,7 +5430,6 @@ static int ntop_set_redis(lua_State* vm) {
 
 static int ntop_set_preference(lua_State* vm) {
   char *key, *value;
-  Redis *redis = ntop->getRedis();
 
   ntop->getTrace()->traceEvent(TRACE_DEBUG, "%s() called", __FUNCTION__);
 
@@ -5440,7 +5439,7 @@ static int ntop_set_preference(lua_State* vm) {
   if(ntop_lua_check(vm, __FUNCTION__, 2, LUA_TSTRING)) return(CONST_LUA_ERROR);
   if((value = (char*)lua_tostring(vm, 2)) == NULL)     return(CONST_LUA_PARAM_ERROR);
 
-  if(ntop->getPrefs()->refresh(key, value) == -1 && redis->set(key, value))
+  if(ntop->getPrefs()->refresh(key, value) == -1)
     return(CONST_LUA_ERROR);
 
   return(CONST_LUA_OK);

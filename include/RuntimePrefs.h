@@ -39,6 +39,7 @@ typedef struct {
   char *key;
   prefsptr_t value_ptr;
   void* value;
+  RwLock *rwlock;
   
   UT_hash_handle hh; /* makes this structure hashable */
 } prefscache_t;
@@ -73,14 +74,14 @@ class RuntimePrefs {
   bool dump_flow_alerts_when_iface_alerted;
   int32_t max_num_alerts_per_entity, max_num_flow_alerts;
   u_int32_t safe_search_dns_ip, global_primary_dns_ip, global_secondary_dns_ip;
-  char *redirection_url;
+  prefscache_t *redirection_url;
   u_int32_t max_num_packets_per_tiny_flow, max_num_bytes_per_tiny_flow;
   HostMask hostMask;
 
   bool writeDump();
   bool readDump();
 
-  void addToCache(const char *key, prefsptr_t value_ptr, void *value);
+  prefscache_t *addToCache(const char *key, prefsptr_t value_ptr, void *value);
  public:
   /**
    * @brief A Constructor.
