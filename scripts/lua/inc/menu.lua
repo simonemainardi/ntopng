@@ -48,22 +48,14 @@ for k,v in pairs(iface_names) do
 end
 
 print [[
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+      <a class="navbar-brand" href="]] print(ntop.getHttpPrefix() .. "/") print [[">]] addLogoSvg() print [[</a>
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
 
-    <nav class="navbar navbar-inverse navbar-fixed-top main-navbar">
-      <div class="container-fluid">
-        <div class="navbar-header">
-          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
-            <span class="sr-only">Toggle navigation</span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </button>
-          <a class="navbar-brand" href="]] print(ntop.getHttpPrefix() .. "/") print [[">]]
-addLogoSvg()
-print [[</a>
-        </div>
-        <div id="navbar" class="navbar-collapse collapse">
-          <ul class="nav navbar-nav navbar-right main-navbar-ul">
+  <div id="navbarSupportedContent" class="navbar-collapse collapse">
+    <ul class="navbar-nav mr-auto>"
    ]]
 
 interface.select(ifname)
@@ -75,15 +67,15 @@ ifId = ifs.id
 -- ##############################################
 
 -- Interfaces Selector
-
-if(num_ifaces > 0) then
-
-print [[ <li class="dropdown"> ]]
+print[[
+<li class="nav-item dropdown">
+</li>
+]]
 
 print [[
-      <a class="dropdown-toggle" data-toggle="dropdown" href="#">]] print(ifname) print[[ <b class="caret"></b>
-      </a>
-      <ul class="dropdown-menu">
+      <li class="nav-item dropdown">
+      <a class="nav-link dropdown-toggle" role="button" id="navbarDropdown" data-toggle="dropdown" href="#" aria-haspopup="true" aria-expanded="false">]] print(ifname) print[[</a>
+      <div class="dropdown-menu" aria-labelledby="navbarDropdown">
 ]]
 
 local views = {}
@@ -133,16 +125,14 @@ for round = 1, 2 do
          -- ntop.getHttpPrefix()
          local url = getPageUrl("", page_params)
 
-	 print("      <li>")
-
 	 if(v == ifname) then
-	    print("<a href=\""..url.."\">")
+	    print("<a class=\"dropdown-item\" href=\""..url.."\">")
 	 else
 	    print[[<form id="switch_interface_form_]] print(tostring(k)) print[[" method="post" action="]] print(url) print[[">]]
 	    print[[<input name="switch_interface" type="hidden" value="1" />]]
 	    print[[<input name="csrf" type="hidden" value="]] print(ntop.getRandomCSRFValue()) print[[" />]]
 	    print[[</form>]]
-	    print[[<a href="javascript:void(0);" onclick="$('#switch_interface_form_]] print(tostring(k)) print[[').submit();">]]
+	    print[[<a class="dropdown-item" href="javascript:void(0);" onclick="$('#switch_interface_form_]] print(tostring(k)) print[[').submit();">]]
 	 end
 
 	 if(v == ifname) then print("<i class=\"fa fa-check\"></i> ") end
@@ -177,33 +167,30 @@ for round = 1, 2 do
 	 end
 
 	 print("</a>")
-	 print("</li>\n")
       end
    end
 end
 
 print [[
-
-      </ul>
+      </div>
     </li>
 ]]
-end -- num_ifaces > 0
 
 if(_SESSION["user"] ~= nil and _SESSION["user"] ~= ntop.getNologinUser()) then
 print [[
-    <li class="dropdown">
-      <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-	 <i class="fa fa-power-off fa-lg"></i> <b class="caret"></b>
+    <li class="nav-item dropdown">
+      <a class="nav-link dropdown-toggle" href="#" id="navbarLogout" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+         <i class="fa fa-sm fa-sign-out"></i>
       </a>
-    <ul class="dropdown-menu">]]
+    <div class="dropdown-menu" aria-labelledby="navbarLogout">]]
 
-print[[<li><a href="]]
+print[[<a class="dropdown-item" href="]]
 print(ntop.getHttpPrefix())
 print [[/lua/logout.lua"><i class="fa fa-sign-out"></i> ]] print(i18n("login.logout_user_x", {user=_SESSION["user"]})) print [[</a></li>]]
 
    print[[
-    </ul>
-    </li>
+    </div>
+   </li>
    ]]
 end
 
@@ -211,7 +198,6 @@ if(not is_admin) then
    dofile(dirs.installdir .. "/scripts/lua/inc/password_dialog.lua")
 end
 
-print("<li>")
 print(
   template.gen("typeahead_input.html", {
     typeahead={
@@ -228,7 +214,6 @@ print(
     }
   })
 )
-print("</li>")
 
 print [[
 </ul>
@@ -243,9 +228,8 @@ print [[
 -- Sidebar
 
 print [[
-    <div class="container-fluid">
-      <div class="row">
-        <div class="col-sm-3 col-md-2 sidebar">
+      <div class="wrapper">
+        <nav id="sidebar">
           <ul class="nav nav-sidebar">
 ]]
 
@@ -634,8 +618,8 @@ print [[
 -- Close Sidebar
 print [[
           </ul>
-        </div>
-        <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+        </nav>
+        <div id="content">
 ]]
 
 -- select the original interface back to prevent possible issues
