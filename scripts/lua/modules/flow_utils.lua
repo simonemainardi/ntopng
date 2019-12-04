@@ -1489,7 +1489,7 @@ function printL4ProtoDropdown(base_url, page_params, l4_protocols)
    local l4proto = _GET["l4proto"]
    local l4proto_filter
    if not isEmptyString(l4proto) then
-      l4proto_filter = '<span class="glyphicon glyphicon-filter"></span>'
+      l4proto_filter = '<span class="fa fa-filter"></span>'
    else
       l4proto_filter = ''
    end
@@ -1551,7 +1551,7 @@ end
 
 local function getParamFilter(page_params, param_name)
     if page_params[param_name] then
-	return '<span class="glyphicon glyphicon-filter"></span>'
+	return '<span class="fa fa-filter"></span>'
     end
 
     return ''
