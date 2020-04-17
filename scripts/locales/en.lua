@@ -3345,9 +3345,12 @@ local lang = {
     ["webhook_url_title"] = "Notification URL",
     ["webhook_username_description"] = "The username to be used in case of HTTP authentication (optional).",
     ["zmq_interfaces"] = "ZMQ Interfaces",
+    ["elasticsearch_unable_to_send_alerts"] = "Unable to send alerts to the Elasticsearch",
     ["elasticsearch_notification"] = "Elasticsearch Notification",
     ["toggle_elasticsearch_notification_description"] = "Toggle alerts notifications to Elasticsearch.",
     ["toggle_elasticsearch_notification_title"] = "Toggle Elasticsearch Notification",
+    ["elasticsearch_send_error"] = "Cannot connect to Elasticsearch. [Response code: %{code}][Response: %{resp}].",
+    ["elasticsearch_sent_successfully"] = "Elasticsearch connection is working.",
   },
   ["processes_stats"] = {
     ["active_processes_title"] = "Active Processes: Realtime View",
