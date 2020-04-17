@@ -3159,6 +3159,7 @@ local lang = {
     ["send_test_mail"] = "Send Test Email",
     ["send_test_slack"] = "Send Test Message",
     ["send_test_webhook"] = "Send Test Message",
+    ["send_test_elasticsearch"] = "Test Connection",
     ["sender_username_description"] = "Set the username of the sender of slack notifications",
     ["sender_username_title"] = "Notification Sender Username",
     ["simple_view"] = "Simple View",
@@ -3344,6 +3345,9 @@ local lang = {
     ["webhook_url_title"] = "Notification URL",
     ["webhook_username_description"] = "The username to be used in case of HTTP authentication (optional).",
     ["zmq_interfaces"] = "ZMQ Interfaces",
+    ["elasticsearch_notification"] = "Elasticsearch Notification",
+    ["toggle_elasticsearch_notification_description"] = "Toggle alerts notifications to Elasticsearch.",
+    ["toggle_elasticsearch_notification_title"] = "Toggle Elasticsearch Notification",
   },
   ["processes_stats"] = {
     ["active_processes_title"] = "Active Processes: Realtime View",

@@ -1905,6 +1905,22 @@ static int ntop_has_geoip(lua_State* vm) {
 
 /* ****************************************** */
 
+static int ntop_elasticsearch_connection(lua_State* vm) {
+  ntop->getTrace()->traceEvent(TRACE_DEBUG, "%s() called", __FUNCTION__);
+
+  if(ntop->getPrefs()->do_dump_flows_on_es()) {
+    lua_newtable(vm);
+    lua_push_str_table_entry(vm, "user", ntop->getPrefs()->get_es_user());
+    lua_push_str_table_entry(vm, "password", ntop->getPrefs()->get_es_pwd());
+    lua_push_str_table_entry(vm, "url", ntop->getPrefs()->get_es_url());
+  } else
+    lua_pushnil(vm);
+
+  return(CONST_LUA_OK);
+}
+
+/* ****************************************** */
+
 static int ntop_is_windows(lua_State* vm) {
   ntop->getTrace()->traceEvent(TRACE_DEBUG, "%s() called", __FUNCTION__);
 
@@ -11829,8 +11845,9 @@ static const luaL_Reg ntop_reg[] = {
 #endif
 
   /* Runtime */
-  { "hasGeoIP",         ntop_has_geoip },
-  { "isWindows",        ntop_is_windows },
+  { "hasGeoIP",                ntop_has_geoip                },
+  { "isWindows",               ntop_is_windows               },
+  { "elasticsearchConnection", ntop_elasticsearch_connection },
 
   /* Custom Categories - only inteded to be called from housekeeping.lua */
   { "startCustomCategoriesReload", ntop_startCustomCategoriesReload },
