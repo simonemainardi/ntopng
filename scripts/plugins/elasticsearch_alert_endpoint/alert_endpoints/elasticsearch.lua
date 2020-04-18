@@ -22,8 +22,10 @@ elasticsearch.prio = 400
 
 local ITERATION_TIMEOUT = 15
 local REQUEST_TIMEOUT = 3
-local MAX_ALERTS_PER_REQUEST = 128
-local INDEX_NAME = "ntopng-alerts"
+-- Maximum number of alerts to pack into a single _bulk POST
+local MAX_ALERTS_PER_REQUEST = 256
+-- Index name pattern for Elasticsearch. The leading ! means UTC for the date
+local INDEX_NAME = "!alerts-ntopng-%Y.%m.%d"
 -- Cache keys used to know when certain periodic checks need to be performed.
 local CACHE_PREFIX = "ntopng.cache.elasticsearch_alerts."
 -- Key to periodically check for the elasticsearch version
@@ -193,7 +195,7 @@ local function sendMessage(alerts)
    local header = {
       index = {
 	 _type = nil, -- Elasticsearch 7.0 complains with "Specifying types in bulk requests is deprecated" -- "_doc",
-	 _index = INDEX_NAME
+	 _index = os.date(INDEX_NAME, now)
       }
    }
    local header_json = json.encode(header)
