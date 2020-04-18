@@ -22,6 +22,68 @@ local ITERATION_TIMEOUT = 15
 local REQUEST_TIMEOUT = 3
 local MAX_ALERTS_PER_REQUEST = 128
 local INDEX_NAME = "ntopng-alerts"
+-- Cache keys used to know when certain periodic checks need to be performed.
+local CACHE_PREFIX = "ntopng.cache.elasticsearch_alerts."
+-- Key to periodically check for the elasticsearch version
+local PERIODIC_CHECK_ELASTICSEARCH_VERSION_KEY = string.format("%s.version", CACHE_PREFIX)
+-- Key to periodically send the mapping to elasticsearch
+local PERIODIC_CHECK_ELASTICSEARCH_MAPPING = string.format("%s.mapping", CACHE_PREFIX)
+
+-- ##############################################
+
+local function check_mapping()
+   return true
+end
+
+-- ##############################################
+
+local function check_version()
+   local version = ntop.getCache(PERIODIC_CHECK_ELASTICSEARCH_VERSION_KEY)
+   version = tonumber(version)
+
+   if version then
+      -- A cached value exists, nothing to do...
+   else
+      local conn = ntop.elasticsearchConnection()
+      local res = ntop.httpGet(conn.host, conn.user, conn.password, REQUEST_TIMEOUT, true)
+
+      if res and res["RESPONSE_CODE"] == 200 then
+	 local res_json = json.decode(res["CONTENT"])
+	 -- Response is a JSON with the follofing keys
+	 -- ...
+	 -- "version" : {
+	 --        "number" : "7.6.2",
+	 -- ...
+	 -- So let's parse the version number
+	 if res_json and res_json["version"] and res_json["version"]["number"] then
+	    local version_string = res_json["version"]["number"]
+	    local major, minor, patch = version_string:match("(%d+)%.(%d+)%.(%d+)")
+
+	    version = tonumber(major)
+	 end
+      else
+	 traceError(TRACE_ERROR, TRACE_CONSOLE, "Unable to fetch Elasticsearch version")
+	 if res then
+	    traceError(TRACE_ERROR, TRACE_CONSOLE, res and res["CONTENT"] or "")
+	 end
+      end
+
+      -- Set the key and keep it for an hour...
+      -- In case there has been an error when getting the version, we set it at zero
+      ntop.setCache(PERIODIC_CHECK_ELASTICSEARCH_VERSION_KEY, tostring(version or 0), 3600)
+   end
+
+   -- Support version at least 7
+   return version and version >= 7, version or 0
+end
+
+-- ##############################################
+
+function elasticsearch.onLoad()
+   -- Clear all periodic checks keys
+   ntop.delCache(PERIODIC_CHECK_ELASTICSEARCH_VERSION_KEY)
+   ntop.delCache(PERIODIC_CHECK_ELASTICSEARCH_MAPPING)
+end
 
 -- ##############################################
 
@@ -56,7 +118,6 @@ local function formatCommonPart(alert_json)
    res["if_name"] = getInterfaceName(alert_json["ifid"])
    res["instance_name"] = ntop.getInstanceName()
 
-   tprint(res)
    return res
 end
 
@@ -150,8 +211,16 @@ end
 
 function elasticsearch.dequeueAlerts(queue)
    local start_time = os.time()
-
    local alerts = {}
+
+   -- Read the version and make sure it is correct and supported
+   local version_ok, version_number = check_version()
+   if not version_ok then
+      return {
+	 success = false,
+	 error_message = i18n("prefs.elasticsearch_unsupported_version", {version = version_number}),
+      }
+   end
 
    while true do
       local diff = os.time() - start_time
@@ -190,12 +259,20 @@ function elasticsearch.handlePost()
 
    if _POST["send_test_elasticsearch"] then
       -- GET the base host which returns version number
-      sendMessage({json.encode({alert_id = 1}),json.encode({alert_id = 2}),json.encode({alert_id = 3})})
+      --      sendMessage({json.encode({alert_id = 1}),json.encode({alert_id = 2}),json.encode({alert_id = 3})})
+      -- Test connectivity
       local res = ntop.httpGet(conn.host, conn.user, conn.password, REQUEST_TIMEOUT, true)
 
       if res and res["RESPONSE_CODE"] == 200 then
-	 message_info = i18n("prefs.elasticsearch_sent_successfully")
-	 message_severity = "alert-success"
+	 -- Now that connectivity is ok, test the version as well
+	 local version_ok, version_number = check_version()
+	 if version_ok then
+	    message_info = i18n("prefs.elasticsearch_sent_successfully")
+	    message_severity = "alert-success"
+	 else
+	    message_info = i18n("prefs.elasticsearch_unsupported_version", {version = version_number})
+	    message_severity = "alert-danger"
+	 end
       else
 	 message_info = i18n("prefs.elasticsearch_send_error", {
 				code = res and res["RESPONSE_CODE"] or 0,

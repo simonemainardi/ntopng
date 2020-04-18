@@ -3350,6 +3350,7 @@ local lang = {
     ["toggle_elasticsearch_notification_description"] = "Toggle alerts notifications to Elasticsearch.",
     ["toggle_elasticsearch_notification_title"] = "Toggle Elasticsearch Notification",
     ["elasticsearch_send_error"] = "Cannot connect to Elasticsearch. [Response code: %{code}][Response: %{resp}].",
+    ["elasticsearch_unsupported_version"] = "Unsupported Elasticsearch version %{version}. Need at least version 7.",
     ["elasticsearch_sent_successfully"] = "Elasticsearch connection is working.",
   },
   ["processes_stats"] = {

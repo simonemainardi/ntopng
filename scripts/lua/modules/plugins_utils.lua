@@ -384,6 +384,13 @@ local function load_plugin_alert_endpoints(endpoints_prefs_entries, plugin)
 
    for fname in pairs(ntop.readdir(endpoints_path)) do
       if fname ~= "prefs_entries.lua" then
+	 -- Execute the alert endpoint and call its method onLoad, if present
+	 local fname_path = os_utils.fixPath(endpoints_path .. "/" .. fname)
+	 local endpoint = dofile(fname_path)
+	 if endpoint and endpoint.onLoad then
+	    endpoint.onLoad()
+	 end
+
 	 if not file_utils.copy_file(fname, endpoints_path, RUNTIME_PATHS.alert_endpoints) then
 	    return false
 	 end
