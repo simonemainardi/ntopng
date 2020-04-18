@@ -5,6 +5,8 @@
 require "lua_utils"
 local json = require "dkjson"
 local alert_consts = require "alert_consts"
+local flow_consts = require "flow_consts"
+local alert_utils = require "alert_utils"
 
 -- ##############################################
 
@@ -26,14 +28,6 @@ local INDEX_NAME = "ntopng-alerts"
 local CACHE_PREFIX = "ntopng.cache.elasticsearch_alerts."
 -- Key to periodically check for the elasticsearch version
 local PERIODIC_CHECK_ELASTICSEARCH_VERSION_KEY = string.format("%s.version", CACHE_PREFIX)
--- Key to periodically send the mapping to elasticsearch
-local PERIODIC_CHECK_ELASTICSEARCH_MAPPING = string.format("%s.mapping", CACHE_PREFIX)
-
--- ##############################################
-
-local function check_mapping()
-   return true
-end
 
 -- ##############################################
 
@@ -82,7 +76,6 @@ end
 function elasticsearch.onLoad()
    -- Clear all periodic checks keys
    ntop.delCache(PERIODIC_CHECK_ELASTICSEARCH_VERSION_KEY)
-   ntop.delCache(PERIODIC_CHECK_ELASTICSEARCH_MAPPING)
 end
 
 -- ##############################################
@@ -111,9 +104,16 @@ local function formatCommonPart(alert_json)
    res["alert_tstamp"] = alert_json["alert_tstamp"]
    res["alert_tstamp_end"] = alert_json["alert_tstamp_end"]
    res["alert_type"] = alert_consts.alertTypeRaw(alert_json["alert_type"])
+   res["alert_subtype"] = alert_json["alert_subtype"]
    res["alert_severity"] = alert_consts.alertSeverityRaw(alert_json["alert_severity"])
    res["alert_entity"] = alert_consts.alertEntityRaw(alert_json["alert_entity"])
    res["alert_entity_val"] = alert_json["alert_entity_val"]
+   res["alert_granularity"] = alert_consts.sec2granularity(alert_json["alert_granularity"])
+   res["alert_json"] = alert_json["alert_json"]
+   res["alert_msg"] = alert_utils.formatAlertNotification(alert_json, {nohtml = true,
+								       show_severity = true,
+								       show_entity = true})
+
    res["ifid"] = alert_json["ifid"]
    res["if_name"] = getInterfaceName(alert_json["ifid"])
    res["instance_name"] = ntop.getInstanceName()
@@ -126,6 +126,29 @@ end
 local function formatFlowAlert(alert_json)
    local res = formatCommonPart(alert_json)
 
+   res["cli_addr"] = alert_json["cli_addr"]
+   res["srv_addr"] = alert_json["srv_addr"]
+
+   res["score"] = alert_json["score"]
+
+   res["flow_status"] = flow_consts.getStatusType(alert_json["flow_status"])
+   res["l7_proto"] = alert_json["proto.ndpi"]
+   res["cli_port"] = alert_json["cli_port"]
+   res["srv_port"] = alert_json["srv_port"]
+   res["vlan_id"] = alert_json["vlan_id"]
+
+   res["srv2cli_bytes"] = alert_json["srv2cli_bytes"]
+   res["cli2srv_bytes"] = alert_json["cli2srv_bytes"]
+   res["srv2cli_packets"] = alert_json["srv2cli_packets"]
+   res["cli2srv_packets"] = alert_json["cli2srv_packets"]
+
+   if not isEmptyString(alert_json["cli_asn"]) then res["cli_asn"] = alert_json["cli_asn"] end
+   if not isEmptyString(alert_json["srv_asn"]) then res["srv_asn"] = alert_json["srv_asn"] end
+   if not isEmptyString(alert_json["cli_country"]) then res["cli_country"] = alert_json["cli_country"] end
+   if not isEmptyString(alert_json["srv_country"]) then res["srv_country"] = alert_json["srv_country"] end
+   if not isEmptyString(alert_json["cli_os"]) then res["cli_os"] = alert_json["cli_os"] end
+   if not isEmptyString(alert_json["srv_os"]) then res["srv_os"] = alert_json["srv_os"] end
+
    return res
 end
 
@@ -133,6 +156,8 @@ end
 
 local function formatAlert(alert_json)
    local res = formatCommonPart(alert_json)
+
+   res["engaged"] = alert_json["action"] == "engage"
 
    return res
 end
