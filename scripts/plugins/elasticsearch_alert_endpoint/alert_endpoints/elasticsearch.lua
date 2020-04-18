@@ -33,6 +33,8 @@ local PERIODIC_CHECK_ELASTICSEARCH_VERSION_KEY = string.format("%s.version", CAC
 
 -- ##############################################
 
+-- @brief Check and cache Elasticsearch version. Minimum required version is 7.
+-- @return true if the version is greater than or equal to 7, false othervise. Version is in the second returned value
 local function check_version()
    local version = ntop.getCache(PERIODIC_CHECK_ELASTICSEARCH_VERSION_KEY)
    version = tonumber(version)
@@ -92,6 +94,9 @@ end
 
 -- ##############################################
 
+-- @brief Prepare a lua table with keys in common between flow and non-flow alerts
+-- @param alert_json A lua table created by decoding an ntopng JSON-alert
+-- @return The prepared lua table
 local function formatCommonPart(alert_json)
    local res = {}
 
@@ -125,6 +130,9 @@ end
 
 -- ##############################################
 
+-- @brief Prepare a lua table with flow alert data
+-- @param alert_json A lua table created by decoding an ntopng JSON-alert
+-- @return The prepared lua table
 local function formatFlowAlert(alert_json)
    local res = formatCommonPart(alert_json)
 
@@ -156,6 +164,8 @@ end
 
 -- ##############################################
 
+-- @brief Prepare a lua table with non-flow alert data
+-- @return The prepared lua table
 local function formatAlert(alert_json)
    local res = formatCommonPart(alert_json)
 
@@ -166,6 +176,9 @@ end
 
 -- ##############################################
 
+-- @brief Prepare a lua table with alert data to be sent to Elasticsearch
+-- @param alert_json A lua table created by decoding an ntopng JSON-alert
+-- @return The prepared lua table
 local function format(alert_json)
    if alert_json["is_flow_alert"] then
       return formatFlowAlert(alert_json)
@@ -175,7 +188,9 @@ local function format(alert_json)
 end
 
 -- ##############################################
--- @brief
+
+-- @brief Send alerts to Elasticsearch using the _bulk API
+-- @return True if sending the alerts has succeded, false otherwise
 local function sendMessage(alerts)
    local conn = ntop.elasticsearchConnection()
    local now = os.time()
@@ -286,7 +301,6 @@ function elasticsearch.handlePost()
 
    if _POST["send_test_elasticsearch"] then
       -- GET the base host which returns version number
-      --      sendMessage({json.encode({alert_id = 1}),json.encode({alert_id = 2}),json.encode({alert_id = 3})})
       -- Test connectivity
       local res = ntop.httpGet(conn.host, conn.user, conn.password, REQUEST_TIMEOUT, true)
 
