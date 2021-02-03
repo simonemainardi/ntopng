@@ -179,7 +179,7 @@ NetworkInterface::NetworkInterface(const char *name,
 
   /* Lazy, instantiated on demand */
   custom_app_stats = NULL;
-  flow_interfaces_stats = NULL;
+  exporters_hash = NULL;
 #endif
 
   loadScalingFactorPrefs();
@@ -306,7 +306,7 @@ void NetworkInterface::init() {
   db = NULL;
 #ifdef NTOPNG_PRO
   custom_app_stats = NULL;
-  flow_interfaces_stats = NULL;
+  exporters_hash = NULL;
   policer = NULL;
 #endif
   ndpiStats = NULL;
@@ -602,7 +602,7 @@ NetworkInterface::~NetworkInterface() {
   if(sub_interfaces)        delete(sub_interfaces);
 #endif
   if(custom_app_stats)      delete custom_app_stats;
-  if(flow_interfaces_stats) delete flow_interfaces_stats;
+  if(exporters_hash)        delete exporters_hash;
 #endif
   if(hide_from_top)         delete(hide_from_top);
   if(hide_from_top_shadow)  delete(hide_from_top_shadow);
@@ -5994,6 +5994,48 @@ Country* NetworkInterface::getCountry(const char *country_name, bool create_if_n
 
   return(ret);
 }
+
+/* **************************************************** */
+
+#ifdef NTOPNG_PRO
+
+ExporterHashEntry* NetworkInterface::getExporter(u_int32_t exporter, u_int32_t interface_index, bool create_if_not_present, bool is_inline_call) {
+  ExporterHashEntry *ret = NULL;
+
+  if(!exporters_hash)
+    return(NULL);
+
+  ret = exporters_hash->get(exporter, interface_index, is_inline_call);
+
+  if((ret == NULL) && create_if_not_present) {
+
+    if(!exporters_hash->hasEmptyRoom())
+      return(NULL);
+
+    try {
+      if((ret = new ExporterHashEntry(this, exporter, interface_index)) != NULL) {
+	if(!exporters_hash->add(ret, !is_inline_call /* Lock only if not inline, if inline there is no need to lock as we are sequential with the purgeIdle */)) {
+          /* Note: this should never happen as we are checking hasEmptyRoom() */
+	  delete ret;
+	  return(NULL);
+	}
+      }
+    } catch(std::bad_alloc& ba) {
+      static bool oom_warning_sent = false;
+
+      if(!oom_warning_sent) {
+	ntop->getTrace()->traceEvent(TRACE_WARNING, "Not enough memory");
+	oom_warning_sent = true;
+      }
+
+      return(NULL);
+    }
+  }
+
+  return(ret);
+}
+
+#endif
 
 /* **************************************************** */
 

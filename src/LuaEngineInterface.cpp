@@ -241,8 +241,8 @@ static int ntop_interface_get_snmp_stats(lua_State* vm) {
 
   ntop->getTrace()->traceEvent(TRACE_DEBUG, "%s() called", __FUNCTION__);
 
-  if(ntop_interface && ntop_interface->getFlowInterfacesStats()) {
-    ntop_interface->getFlowInterfacesStats()->lua(vm);
+  if(ntop_interface && ntop_interface->getExporterHash()) {
+    ntop_interface->getExporterHash()->lua(vm);
     return(CONST_LUA_OK);
   } else
     return(CONST_LUA_ERROR);

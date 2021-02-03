@@ -255,7 +255,6 @@ using namespace std;
 #endif
 #include "CounterTrend.h"
 #include "LRUMacIP.h"
-#include "FlowInterfacesStats.h"
 #ifdef HAVE_LDAP
 #include "LdapAuthenticator.h"
 #endif
@@ -320,6 +319,7 @@ using namespace std;
 #include "RecipientQueues.h"
 #include "Recipients.h"
 #ifdef NTOPNG_PRO
+#include "ExporterHash.h"
 #include "PeriodicityMatchInfo.h"
 #include "PeriodicityStats.h"
 #include "PeriodicityHash.h"
@@ -375,6 +375,9 @@ using namespace std;
 #include "ExportInterface.h"
 #endif
 
+#ifdef NTOPNG_PRO
+#include "ExporterHashEntry.h"
+#endif
 #include "Geolocation.h"
 #include "Vlan.h"
 #include "AutonomousSystem.h"

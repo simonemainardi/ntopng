@@ -49,7 +49,8 @@ class ViewInterface;
 
 #ifdef NTOPNG_PRO
 class L7Policer;
-class FlowInterfacesStats;
+class ExporterHash;
+class ExporterHashEntry;
 class TrafficShaper;
 class NIndexFlowDB;
 #endif
@@ -179,7 +180,7 @@ class NetworkInterface : public AlertableEntity {
   SubInterfaces *sub_interfaces;
 #endif
   CustomAppStats *custom_app_stats;
-  FlowInterfacesStats *flow_interfaces_stats;
+  ExporterHash *exporters_hash;
 #endif
   EthStats ethStats;
   std::map<u_int32_t, u_int64_t> ip_mac; /* IP (network byte order) <-> MAC association [2 bytes are unused] */
@@ -705,10 +706,16 @@ class NetworkInterface : public AlertableEntity {
 
   virtual void runHousekeepingTasks();
   void runShutdownTasks();
+
+  /* Hash table getters */
   Vlan* getVlan(u_int16_t vlanId, bool create_if_not_present, bool is_inline_call);
   AutonomousSystem *getAS(IpAddress *ipa, bool create_if_not_present, bool is_inline_call);
   OperatingSystem *getOS(OSType os, bool create_if_not_present, bool is_inline_call);
   Country* getCountry(const char *country_name, bool create_if_not_present, bool is_inline_call);
+#ifdef NTOPNG_PRO
+  ExporterHashEntry* getExporter(u_int32_t device, u_int32_t interface_index, bool create_if_not_present, bool is_inline_call);
+#endif
+
   virtual Mac*  getMac(u_int8_t _mac[6], bool create_if_not_present, bool is_inline_call);
   virtual Host* getHost(char *host_ip, u_int16_t vlan_id, bool is_inline_call);
   bool getHostInfo(lua_State* vm, AddressTree *allowed_hosts, char *host_ip, u_int16_t vlan_id);
@@ -726,8 +733,8 @@ class NetworkInterface : public AlertableEntity {
 #ifdef NTOPNG_PRO
   void refreshL7Rules();
   void refreshShapers();
-  inline L7Policer* getL7Policer()                     { return(policer);                }
-  inline FlowInterfacesStats* getFlowInterfacesStats() { return(flow_interfaces_stats);  }
+  inline L7Policer* getL7Policer()                     { return(policer);         }
+  inline ExporterHash* getExporterHash()               { return(exporters_hash);  }
 #endif
   inline HostPools* getHostPools()                     { return(host_pools);    }
 
@@ -788,10 +795,10 @@ class NetworkInterface : public AlertableEntity {
   inline void incDBNumDroppedFlows(DB *dumper, u_int num = 1) { if(dumper) dumper->incNumDroppedFlows(num); };
 #ifdef NTOPNG_PRO
   inline void getFlowDevices(lua_State *vm) {
-    if(flow_interfaces_stats) flow_interfaces_stats->luaDeviceList(vm); else lua_newtable(vm);
+    if(exporters_hash) exporters_hash->luaDeviceList(vm); else lua_newtable(vm);
   };
   inline void getFlowDeviceInfo(lua_State *vm, u_int32_t deviceIP) {
-    if(flow_interfaces_stats) flow_interfaces_stats->luaDeviceInfo(vm, deviceIP); else lua_newtable(vm);
+    if(exporters_hash) exporters_hash->luaDeviceInfo(vm, deviceIP); else lua_newtable(vm);
   };
 #endif
   inline void getSFlowDevices(lua_State *vm) {
